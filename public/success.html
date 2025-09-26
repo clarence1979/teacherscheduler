@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified Successfully - Teacher Scheduler AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            box-shadow: 0 10px 30px rgba(40, 167, 69, 0.3);
+            animation: bounceIn 0.8s ease-out;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            color: white;
+        }
+
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            line-height: 1.2;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #6c757d;
+            margin-bottom: 35px;
+            line-height: 1.5;
+        }
+
+        .message {
+            font-size: 16px;
+            color: #495057;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border-left: 4px solid #28a745;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+        }
+
+        .cta-button:active {
+            transform: translateY(0);
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        .features {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .features h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .features-list {
+            display: grid;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .feature-item::before {
+            content: '✓';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e9ecef;
+            font-size: 14px;
+            color: #adb5bd;
+        }
+
+        .loading-dots {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .loading-dots span {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 1.4s ease-in-out infinite both;
+        }
+
+        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 25px;
+                margin: 10px;
+            }
+
+            .title {
+                font-size: 26px;
+            }
+
+            .subtitle {
+                font-size: 16px;
+            }
+
+            .message {
+                padding: 20px;
+                font-size: 15px;
+            }
+
+            .cta-button {
+                padding: 14px 35px;
+                font-size: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            .title {
+                font-size: 24px;
+            }
+
+            .success-icon {
+                width: 70px;
+                height: 70px;
+            }
+
+            .success-icon svg {
+                width: 35px;
+                height: 35px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+        </div>
+
+        <h1 class="title">Email Verified Successfully!</h1>
+        <p class="subtitle">Welcome to Teacher Scheduler AI</p>
+
+        <div class="message">
+            <strong>Congratulations!</strong> Your email has been successfully verified and your account is now active. You can now access all features of the Teacher Scheduler AI platform.
+        </div>
+
+        <a href="https://teacher-scheduler-ai-bb0t.bolt.host/" class="cta-button" id="redirectBtn">
+            Access Your Dashboard
+        </a>
+
+        <div class="loading-dots" id="loadingDots">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="features">
+            <h3>What's Next?</h3>
+            <div class="features-list">
+                <div class="feature-item">AI-powered automatic task scheduling</div>
+                <div class="feature-item">Smart calendar integration and optimization</div>
+                <div class="feature-item">Real-time schedule adjustments</div>
+                <div class="feature-item">Advanced productivity analytics</div>
+                <div class="feature-item">Meeting scheduler with booking links</div>
+                <div class="feature-item">Project management and collaboration tools</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>You will be automatically redirected in <span id="countdown">10</span> seconds.</p>
+            <p style="margin-top: 8px;">Having trouble? <a href="https://teacher-scheduler-ai-bb0t.bolt.host/" style="color: #667eea; text-decoration: none;">Click here to go directly</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect functionality
+        let countdown = 10;
+        const countdownElement = document.getElementById('countdown');
+        const redirectBtn = document.getElementById('redirectBtn');
+        const loadingDots = document.getElementById('loadingDots');
+
+        function updateCountdown() {
+            if (countdown > 0) {
+                countdownElement.textContent = countdown;
+                countdown--;
+                setTimeout(updateCountdown, 1000);
+            } else {
+                // Show loading animation
+                redirectBtn.style.display = 'none';
+                loadingDots.style.display = 'flex';
+                
+                // Redirect after a short delay
+                setTimeout(() => {
+                    window.location.href = 'https://teacher-scheduler-ai-bb0t.bolt.host/';
+                }, 1000);
+            }
+        }
+
+        // Start countdown
+        updateCountdown();
+
+        // Handle manual button click
+        redirectBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Show loading animation
+            redirectBtn.style.display = 'none';
+            loadingDots.style.display = 'flex';
+            
+            // Small delay for visual feedback
+            setTimeout(() => {
+                window.location.href = 'https://teacher-scheduler-ai-bb0t.bolt.host/';
+            }, 800);
+        });
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add entrance animation to container
+            const container = document.querySelector('.container');
+            container.style.opacity = '0';
+            container.style.transform = 'translateY(30px)';
+            
+            setTimeout(() => {
+                container.style.transition = 'all 0.8s ease-out';
+                container.style.opacity = '1';
+                container.style.transform = 'translateY(0)';
+            }, 100);
+
+            // Add subtle floating animation to success icon
+            const successIcon = document.querySelector('.success-icon');
+            setInterval(() => {
+                successIcon.style.transform = 'translateY(-5px)';
+                setTimeout(() => {
+                    successIcon.style.transform = 'translateY(0)';
+                }, 1000);
+            }, 3000);
+        });
+
+        // Handle page visibility changes (when user comes back to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && countdown <= 0) {
+                // If countdown is finished and user comes back, redirect immediately
+                window.location.href = 'https://teacher-scheduler-ai-bb0t.bolt.host/';
+            }
+        });
+
+        // Keyboard accessibility
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                redirectBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,497 @@
+import React, { useState, useEffect } from 'react';
+import { Bot, Zap, Clock, CheckCircle, AlertCircle, Play, Pause, Settings } from 'lucide-react';
+import { AIEmployeeManager } from '../../lib/ai-employee-manager';
+
+interface AIEmployeesProps {
+  aiManager: AIEmployeeManager;
+}
+
+const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager }) => {
+  const [employees, setEmployees] = useState(aiManager.getAllEmployees());
+  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [showWorkflowModal, setShowWorkflowModal] = useState(false);
+  const [workflowForm, setWorkflowForm] = useState({
+    type: '',
+    parameters: {} as Record<string, any>
+  });
+
+  useEffect(() => {
+    const handleWorkflowUpdate = (workflow: any) => {
+      setWorkflows(prev => {
+        const index = prev.findIndex(w => w.id === workflow.id);
+        if (index >= 0) {
+          const updated = [...prev];
+          updated[index] = workflow;
+          return updated;
+        } else {
+          return [...prev, workflow];
+        }
+      });
+    };
+
+    aiManager.onWorkflowUpdate(handleWorkflowUpdate);
+
+    return () => {
+      aiManager.offWorkflowUpdate(handleWorkflowUpdate);
+    };
+  }, [aiManager]);
+
+  const handleExecuteWorkflow = async (employeeId: string, workflowType: string, parameters: Record<string, any>) => {
+    try {
+      await aiManager.executeWorkflow(workflowType, parameters, employeeId);
+      setShowWorkflowModal(false);
+      setWorkflowForm({ type: '', parameters: {} });
+    } catch (error) {
+      console.error('Failed to execute workflow:', error);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors = {
+      'queued': 'text-yellow-600 bg-yellow-50',
+      'processing': 'text-blue-600 bg-blue-50',
+      'completed': 'text-green-600 bg-green-50',
+      'failed': 'text-red-600 bg-red-50',
+      'requires_approval': 'text-orange-600 bg-orange-50'
+    };
+    return colors[status as keyof typeof colors] || 'text-gray-600 bg-gray-50';
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'queued': return <Clock className="h-4 w-4" />;
+      case 'processing': return <Play className="h-4 w-4 animate-spin" />;
+      case 'completed': return <CheckCircle className="h-4 w-4" />;
+      case 'failed': return <AlertCircle className="h-4 w-4" />;
+      case 'requires_approval': return <Pause className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const formatDuration = (start: Date, end?: Date) => {
+    const duration = (end || new Date()).getTime() - start.getTime();
+    const seconds = Math.floor(duration / 1000);
+    const minutes = Math.floor(seconds / 60);
+    
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    }
+    return `${seconds}s`;
+  };
+
+  return (
+    <div className="ai-employees">
+      {/* Header */}
+      <div className="ai-header">
+        <div className="header-content">
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Bot className="h-6 w-6 text-blue-600" />
+            AI Employees
+          </h2>
+          <p className="text-gray-600">Automate workflows with intelligent AI assistants</p>
+        </div>
+        <button
+          onClick={() => setShowWorkflowModal(true)}
+          className="btn btn-primary"
+        >
+          <Zap className="h-4 w-4" />
+          New Workflow
+        </button>
+      </div>
+
+      {/* AI Employees Grid */}
+      <div className="employees-grid">
+        {employees.map(employee => {
+          const employeeWorkflows = workflows.filter(w => w.employeeId === employee.id);
+          const activeWorkflows = employeeWorkflows.filter(w => 
+            w.status === 'processing' || w.status === 'queued'
+          );
+
+          return (
+            <div key={employee.id} className="employee-card">
+              <div className="employee-header">
+                <div className="employee-avatar">
+                  <span className="avatar-emoji">{employee.avatar}</span>
+                  {activeWorkflows.length > 0 && (
+                    <div className="activity-indicator">
+                      <div className="pulse-dot" />
+                    </div>
+                  )}
+                </div>
+                <div className="employee-info">
+                  <h3 className="employee-name">{employee.name}</h3>
+                  <p className="employee-role">{employee.role}</p>
+                  {!aiManager.hasValidApiKey() && (
+                    <span className="demo-badge">Demo Mode</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setSelectedEmployee(employee.id)}
+                  className="settings-btn"
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="employee-stats">
+                <div className="stat">
+                  <span className="stat-value">{employee.performance.tasksCompleted}</span>
+                  <span className="stat-label">Tasks Completed</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{Math.round(employee.performance.successRate * 100)}%</span>
+                  <span className="stat-label">Success Rate</span>
+                </div>
+                <div className="stat">
+                  <span className="stat-value">{activeWorkflows.length}</span>
+                  <span className="stat-label">Active</span>
+                </div>
+              </div>
+
+              <div className="employee-capabilities">
+                <h4>Capabilities</h4>
+                <div className="capabilities-list">
+                  {employee.capabilities.slice(0, 3).map(capability => (
+                    <span key={capability} className="capability-tag">
+                      {capability.replace('-', ' ')}
+                    </span>
+                  ))}
+                  {employee.capabilities.length > 3 && (
+                    <span className="capability-tag more">
+                      +{employee.capabilities.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="employee-actions">
+                <button
+                  onClick={() => {
+                    setSelectedEmployee(employee.id);
+                    setShowWorkflowModal(true);
+                  }}
+                  className="btn btn-sm btn-primary"
+                >
+                  <Play className="h-4 w-4" />
+                  Assign Task
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Recent Workflows */}
+      <div className="workflows-section">
+        <h3 className="section-title">Recent Workflows</h3>
+        
+        {workflows.length === 0 ? (
+          <div className="empty-workflows">
+            <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h4>No workflows yet</h4>
+            <p>Start by assigning a task to one of your AI employees</p>
+          </div>
+        ) : (
+          <div className="workflows-list">
+            {workflows
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 10)
+              .map(workflow => {
+                const employee = employees.find(e => e.id === workflow.employeeId);
+                
+                return (
+                  <div key={workflow.id} className="workflow-item">
+                    <div className="workflow-header">
+                      <div className="workflow-employee">
+                        <span className="employee-avatar-sm">{employee?.avatar}</span>
+                        <div>
+                          <div className="workflow-title">{workflow.workflowType.replace('-', ' ')}</div>
+                          <div className="workflow-employee-name">{employee?.name}</div>
+                        </div>
+                      </div>
+                      
+                      <div className={`workflow-status ${getStatusColor(workflow.status)}`}>
+                        {getStatusIcon(workflow.status)}
+                        <span>{workflow.status.replace('_', ' ')}</span>
+                      </div>
+                    </div>
+
+                    <div className="workflow-details">
+                      <div className="workflow-meta">
+                        <span className="workflow-time">
+                          {formatDuration(new Date(workflow.createdAt), workflow.completedAt ? new Date(workflow.completedAt) : undefined)}
+                        </span>
+                        <span className="workflow-priority priority-{workflow.priority}">
+                          {workflow.priority}
+                        </span>
+                      </div>
+
+                      {workflow.result && workflow.status === 'completed' && (
+                        <div className="workflow-result">
+                          <div className="result-preview">
+                            {typeof workflow.result.output === 'object' ? 
+                              workflow.result.output.title || 'Task completed successfully' :
+                              String(workflow.result.output).substring(0, 100) + '...'
+                            }
+                          </div>
+                          <div className="result-confidence">
+                            {workflow.result.source === 'openai' ? 'OpenAI Generated' : 'Demo Response'}
+                          </div>
+                        </div>
+                      )}
+
+                      {workflow.status === 'requires_approval' && (
+                        <div className="workflow-actions">
+                          <button className="btn btn-sm btn-success">Approve</button>
+                          <button className="btn btn-sm btn-secondary">Review</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+
+      {/* Workflow Creation Modal */}
+      {showWorkflowModal && (
+        <WorkflowModal
+          employees={employees}
+          selectedEmployee={selectedEmployee}
+          onClose={() => {
+            setShowWorkflowModal(false);
+            setSelectedEmployee(null);
+          }}
+          onExecute={handleExecuteWorkflow}
+        />
+      )}
+    </div>
+  );
+};
+
+// Workflow Creation Modal
+const WorkflowModal: React.FC<{
+  employees: any[];
+  selectedEmployee: string | null;
+  onClose: () => void;
+  onExecute: (employeeId: string, workflowType: string, parameters: Record<string, any>) => void;
+}> = ({ employees, selectedEmployee, onClose, onExecute }) => {
+  const [formData, setFormData] = useState({
+    employeeId: selectedEmployee || '',
+    workflowType: '',
+    parameters: {} as Record<string, any>
+  });
+
+  const selectedEmployeeData = employees.find(e => e.id === formData.employeeId);
+  const availableWorkflows = selectedEmployeeData ? Object.keys(selectedEmployeeData.prompts) : [];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onExecute(formData.employeeId, formData.workflowType, formData.parameters);
+  };
+
+  const renderParameterInputs = () => {
+    const workflowParams = getWorkflowParameters(formData.workflowType);
+    
+    return workflowParams.map(param => (
+      <div key={param.name} className="form-group">
+        <label className="form-label">{param.label}</label>
+        {param.type === 'textarea' ? (
+          <textarea
+            value={formData.parameters[param.name] || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              parameters: { ...formData.parameters, [param.name]: e.target.value }
+            })}
+            className="form-textarea"
+            placeholder={param.placeholder}
+            rows={3}
+          />
+        ) : param.type === 'select' ? (
+          <select
+            value={formData.parameters[param.name] || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              parameters: { ...formData.parameters, [param.name]: e.target.value }
+            })}
+            className="form-select"
+          >
+            <option value="">Select {param.label}</option>
+            {param.options?.map(option => (
+              <option key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            type={param.type || 'text'}
+            value={formData.parameters[param.name] || ''}
+            onChange={(e) => setFormData({
+              ...formData,
+              parameters: { ...formData.parameters, [param.name]: e.target.value }
+            })}
+            className="form-input"
+            placeholder={param.placeholder}
+          />
+        )}
+      </div>
+    ));
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Create AI Workflow</h3>
+          <button onClick={onClose} className="modal-close">×</button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="modal-body">
+          <div className="form-group">
+            <label className="form-label">AI Employee</label>
+            <select
+              value={formData.employeeId}
+              onChange={(e) => setFormData({ ...formData, employeeId: e.target.value, workflowType: '' })}
+              className="form-select"
+              required
+            >
+              <option value="">Select an AI Employee</option>
+              {employees.map(employee => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.avatar} {employee.name} - {employee.role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formData.employeeId && (
+            <div className="form-group">
+              <label className="form-label">Workflow Type</label>
+              <select
+                value={formData.workflowType}
+                onChange={(e) => setFormData({ ...formData, workflowType: e.target.value, parameters: {} })}
+                className="form-select"
+                required
+              >
+                <option value="">Select workflow type</option>
+                {availableWorkflows.map(workflow => (
+                  <option key={workflow} value={workflow}>
+                    {workflow.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {formData.workflowType && renderParameterInputs()}
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+              <Zap className="h-4 w-4" />
+              Execute Workflow
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to get workflow parameters
+const getWorkflowParameters = (workflowType: string) => {
+  const parameterMap: Record<string, any[]> = {
+    'detailed-lesson-plan': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'topic', label: 'Topic', type: 'text', placeholder: 'Main topic for this lesson' },
+      { name: 'duration', label: 'Lesson Duration', type: 'select', options: ['30 minutes', '45 minutes', '60 minutes', '90 minutes'] }
+    ],
+    'unit-plan': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'topics', label: 'Topics to Cover', type: 'textarea', placeholder: 'List the main topics for this unit' },
+      { name: 'duration', label: 'Unit Duration', type: 'select', options: ['1 week', '2 weeks', '3 weeks', '4 weeks', '6 weeks'] }
+    ],
+    'differentiated-activities': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'topic', label: 'Topic', type: 'text', placeholder: 'Specific topic or concept' }
+    ],
+    'assessment-rubric': [
+      { name: 'assignment_type', label: 'Assignment Type', type: 'text', placeholder: 'e.g., Essay, Project, Presentation' },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] }
+    ],
+    'quiz-questions': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'topics', label: 'Topics', type: 'textarea', placeholder: 'Topics to cover in the quiz' },
+      { name: 'number', label: 'Number of Questions', type: 'select', options: ['5', '10', '15', '20', '25'] },
+      { name: 'question_type', label: 'Question Type', type: 'select', options: ['multiple choice', 'short answer', 'essay', 'mixed'] }
+    ],
+    'student-feedback': [
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'assignment_type', label: 'Assignment Type', type: 'text', placeholder: 'e.g., Essay, Project, Test' },
+      { name: 'topic', label: 'Topic', type: 'text', placeholder: 'Assignment topic' },
+      { name: 'strengths', label: 'Student Strengths', type: 'textarea', placeholder: 'What did the student do well?' },
+      { name: 'improvements', label: 'Areas for Improvement', type: 'textarea', placeholder: 'What needs work?' }
+    ],
+    'parent-email': [
+      { name: 'student_name', label: 'Student Name', type: 'text', placeholder: 'Student\'s name' },
+      { name: 'topic', label: 'Email Topic', type: 'text', placeholder: 'e.g., Student Progress Update' },
+      { name: 'tone', label: 'Tone', type: 'select', options: ['positive', 'concerned', 'informative', 'urgent'] }
+    ],
+    'conference-notes': [
+      { name: 'student_name', label: 'Student Name', type: 'text', placeholder: 'Student\'s name' },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' }
+    ],
+    'behavior-plan': [
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'behavior_issues', label: 'Behavior Issues', type: 'textarea', placeholder: 'Describe the behavior concerns' }
+    ],
+    'engagement-strategies': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'lesson_type', label: 'Lesson Type', type: 'text', placeholder: 'e.g., lecture, discussion, hands-on' }
+    ],
+    'accommodation-plan': [
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'disability_type', label: 'Disability/Need', type: 'text', placeholder: 'e.g., ADHD, dyslexia, autism' },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' }
+    ],
+    'tech-integration': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'topic', label: 'Topic', type: 'text', placeholder: 'Lesson topic' }
+    ],
+    'sub-plans': [
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'e.g., Mathematics, Science, English' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'duration', label: 'Duration', type: 'select', options: ['Half day', 'Full day', '2 days', '3 days'] }
+    ],
+    'reflection-questions': [
+      { name: 'teaching_strategy', label: 'Teaching Strategy', type: 'text', placeholder: 'e.g., cooperative learning, flipped classroom' },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] }
+    ],
+    'digital-project': [
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' },
+      { name: 'topic', label: 'Topic', type: 'text', placeholder: 'Topic or concept' }
+    ],
+    // Legacy support for existing workflows
+    'lesson-plan': [
+      { name: 'assignment_type', label: 'Assignment Type', type: 'text', placeholder: 'e.g., Essay, Project, Presentation' },
+      { name: 'subject', label: 'Subject', type: 'text', placeholder: 'Subject area' },
+      { name: 'grade_level', label: 'Grade Level', type: 'select', options: ['Year 7', 'Year 8', 'Year 9', 'Year 10', 'Year 11', 'Year 12'] }
+    ]
+  };
+
+  return parameterMap[workflowType] || [];
+};
+
+export default AIEmployees;
