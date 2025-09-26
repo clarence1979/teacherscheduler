@@ -1,22 +1,34 @@
-// src/lib/happiness-algorithm.ts
 export class HappinessAlgorithm {
-  constructor() {
-    // Initialize the algorithm
-  }
+  constructor() {}
 
   calculateOptimalSchedule(tasks: any[], preferences: any = {}) {
-    // TODO: Implement happiness algorithm
     console.log('Calculating optimal schedule based on happiness factors...');
-    return tasks; // Return tasks as-is for now
+    
+    // Sort by priority and happiness factors
+    return tasks.sort((a, b) => {
+      const priorityA = a.priority || 1;
+      const priorityB = b.priority || 1;
+      const happinessA = a.happinessFactor || 5;
+      const happinessB = b.happinessFactor || 5;
+      
+      return (priorityB + happinessB) - (priorityA + happinessA);
+    });
   }
 
   adjustForWellBeing(schedule: any[]) {
-    // TODO: Implement well-being adjustments
-    return schedule;
+    // Limit consecutive work blocks
+    return schedule.map((task, index) => ({
+      ...task,
+      breakAfter: index > 0 && index % 3 === 0
+    }));
   }
 
   getHappinessScore(schedule: any[]) {
-    // TODO: Calculate happiness score
-    return 85; // Mock score
+    if (!schedule.length) return 50;
+    
+    const avgHappiness = schedule.reduce((sum, task) => 
+      sum + (task.happinessFactor || 5), 0) / schedule.length;
+    
+    return Math.round(avgHappiness * 20); // Scale to 0-100
   }
 }
