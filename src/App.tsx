@@ -5,7 +5,7 @@ import { isSupabaseAvailable } from '../../lib/supabase';
 import { googleAuth } from '../../lib/google-auth';
 import { microsoftAuth } from '../../lib/microsoft-auth';
 import { mobileDetection } from '../utils/mobile-detection';
-
+import { mobileDetection } from '../utils/mobile-detection';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -18,6 +18,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile] = useState(mobileDetection.isMobile());
   const [isMobile] = useState(mobileDetection.isMobile());
   const [isDark, setIsDark] = useState(() => {
     // Check localStorage first, then system preference
