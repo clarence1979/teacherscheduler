@@ -19,7 +19,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobile] = useState(mobileDetection.isMobile());
-  const [isMobile] = useState(mobileDetection.isMobile());
+ 
   const [isDark, setIsDark] = useState(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem('theme');
