@@ -5,7 +5,7 @@ import { isSupabaseAvailable } from '../../lib/supabase';
 import { googleAuth } from '../../lib/google-auth';
 import { microsoftAuth } from '../../lib/microsoft-auth';
 import { mobileDetection } from '../utils/mobile-detection';
-import { mobileDetection } from '../utils/mobile-detection';
+
 
 interface AuthProps {
   onAuthSuccess: () => void;
