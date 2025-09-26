@@ -1,37 +1,133 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, LogIn, UserPlus, Sun, Moon } from 'lucide-react';
-import { auth } from '../../lib/auth';
-import { isSupabaseAvailable } from '../../lib/supabase';
-import { googleAuth } from '../../lib/google-auth';
-import { microsoftAuth } from '../../lib/microsoft-auth';
-import { mobileDetection } from '../utils/mobile-detection';
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  BarChart3, 
+  Bot, 
+  Users, 
+  SettingsIcon as Settings,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  LogOut
+} from 'lucide-react';
+import { auth, isSupabaseAvailable } from './lib/auth';
+import { googleAuth } from './lib/google-auth';
+import { microsoftAuth } from './lib/microsoft-auth';
+import { mobileDetection } from './utils/mobile-detection';
 
-interface AuthProps {
-  onAuthSuccess: () => void;
+// Import components
+import Auth from './components/Auth';
+import TaskForm from './components/TaskForm';
+import TaskList from './components/TaskList';
+import ScheduleView from './components/ScheduleView';
+import Analytics from './components/Analytics';
+import AIEmployees from './components/AIEmployees';
+import SettingsComponent from './components/Settings';
+import MobileOptimizedTaskForm from './components/MobileOptimizedTaskForm';
+
+// Import lib classes
+import { HappinessAlgorithm } from './lib/happiness-algorithm';
+import { AIEmployeeManager } from './lib/ai-employee-manager';
+import { AnalyticsManager } from './lib/analytics-manager';
+import { WorkspaceManager } from './lib/workspace-manager';
+import { RealTimeOptimizer } from './lib/real-time-optimizer';
+import { CalendarIntegration } from './lib/calendar-integration';
+
+// Import types
+import { Task, OptimizationResult, UserSchedule } from './lib/types';
+
+interface AppState {
+  isAuthenticated: boolean;
+  user: any;
+  tasks: Task[];
+  optimizationResult: OptimizationResult | null;
+  activeView: 'schedule' | 'tasks' | 'analytics' | 'ai-employees' | 'meetings';
+  isDark: boolean;
+  isMobile: boolean;
+  showMobileMenu: boolean;
 }
 
-const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [microsoftLoading, setMicrosoftLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isMobile] = useState(mobileDetection.isMobile());
-  const [isDark, setIsDark] = useState(() => {
-    // Check localStorage first, then system preference
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    fullName: ''
+const App: React.FC = () => {
+  const [state, setState] = useState<AppState>({
+    isAuthenticated: false,
+    user: null,
+    tasks: [],
+    optimizationResult: null,
+    activeView: 'schedule',
+    isDark: false,
+    isMobile: mobileDetection.isMobile(),
+    showMobileMenu: false
   });
 
-  // Apply theme on component mount and when isDark changes
-  React.useEffect(() => {
+  // Initialize managers
+  const [userSchedule] = useState<UserSchedule>({
+    workingHours: {
+      monday: [9, 17],
+      tuesday: [9, 17],
+      wednesday: [9, 17],
+      thursday: [9, 17],
+      friday: [9, 17]
+    },
+    preferences: {
+      focusTimeBlocks: 120,
+      bufferBetweenTasks: 15,
+      preferredTaskTimes: {
+        'ASAP': 'morning',
+        'High': 'morning',
+        'Medium': 'afternoon',
+        'Low': 'anytime'
+      }
+    }
+  });
+
+  const [happinessAlgorithm] = useState(() => new HappinessAlgorithm(userSchedule));
+  const [aiManager] = useState(() => new AIEmployeeManager());
+  const [analyticsManager] = useState(() => new AnalyticsManager());
+  const [workspaceManager] = useState(() => new WorkspaceManager());
+  const [realTimeOptimizer] = useState(() => new RealTimeOptimizer(happinessAlgorithm));
+  const [calendarIntegration] = useState(() => new CalendarIntegration());
+
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        if (isSupabaseAvailable()) {
+          const user = await auth.getCurrentUser();
+          if (user) {
+            setState(prev => ({ ...prev, isAuthenticated: true, user }));
+          }
+        } else {
+          // Demo mode - allow access without authentication
+          setState(prev => ({ ...prev, isAuthenticated: true, user: { email: 'demo@example.com' } }));
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        // Continue in demo mode
+        setState(prev => ({ ...prev, isAuthenticated: true, user: { email: 'demo@example.com' } }));
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Handle device changes
+  useEffect(() => {
+    const unsubscribe = mobileDetection.onChange((deviceInfo) => {
+      setState(prev => ({ ...prev, isMobile: deviceInfo.isMobile }));
+    });
+
+    return unsubscribe;
+  }, []);
+
+  // Theme management
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+    
+    setState(prev => ({ ...prev, isDark }));
+    
     const html = document.documentElement;
     if (isDark) {
       html.classList.add('dark');
@@ -40,308 +136,306 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       html.classList.add('light');
       html.classList.remove('dark');
     }
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  // Check for stored Microsoft authentication on component mount
-  React.useEffect(() => {
-    if (microsoftAuth.loadStoredTokens()) {
-      console.log('Microsoft authentication restored from storage');
-    }
   }, []);
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    const newIsDark = !state.isDark;
+    setState(prev => ({ ...prev, isDark: newIsDark }));
+    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
     
-    if (!isSupabaseAvailable()) {
-      setError('Database connection not available. The app will run in demo mode.');
-      // Allow continuing in demo mode after showing error
-      setTimeout(() => {
-        onAuthSuccess();
-      }, 2000);
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      if (isSignUp) {
-        await auth.signUp(formData.email, formData.password, formData.fullName);
-        setError('Check your email for the confirmation link!');
-      } else {
-        await auth.signIn(formData.email, formData.password);
-        onAuthSuccess();
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+    const html = document.documentElement;
+    if (newIsDark) {
+      html.classList.add('dark');
+      html.classList.remove('light');
+    } else {
+      html.classList.add('light');
+      html.classList.remove('dark');
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError(null);
+  const handleAuthSuccess = () => {
+    setState(prev => ({ ...prev, isAuthenticated: true }));
+  };
 
+  const handleSignOut = async () => {
     try {
-      await googleAuth.signInWithGoogle();
-      
-      // Get user info and calendar credentials
-      const userInfo = googleAuth.getCurrentUser();
-      const calendarCreds = googleAuth.getCalendarCredentials();
-      
-      if (userInfo && calendarCreds) {
-        // Auto-configure calendar integration
-        console.log('Google authentication successful:', userInfo);
-        console.log('Calendar credentials ready:', calendarCreds);
-        
-        // Store calendar credentials for automatic use
-        localStorage.setItem('google_calendar_credentials', JSON.stringify(calendarCreds));
-        
-        onAuthSuccess();
-      } else {
-        throw new Error('Failed to retrieve user information or calendar access');
+      if (isSupabaseAvailable()) {
+        await auth.signOut();
       }
-    } catch (err: any) {
-      setError(err.message || 'Google authentication failed');
-    } finally {
-      setGoogleLoading(false);
+      googleAuth.signOut();
+      microsoftAuth.signOut();
+      setState(prev => ({ 
+        ...prev, 
+        isAuthenticated: false, 
+        user: null,
+        tasks: [],
+        optimizationResult: null
+      }));
+    } catch (error) {
+      console.error('Sign out error:', error);
     }
   };
 
-  const handleMicrosoftSignIn = async () => {
-    setMicrosoftLoading(true);
-    setError(null);
+  const handleAddTask = (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: Date.now().toString(),
+      userId: state.user?.id || 'demo-user',
+      state: 'To Do',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    try {
-      await microsoftAuth.signInWithMicrosoft();
-      
-      // Get user info and calendar credentials
-      const userInfo = microsoftAuth.getCurrentUser();
-      const calendarCreds = microsoftAuth.getCalendarCredentials();
-      
-      if (userInfo && calendarCreds) {
-        // Auto-configure calendar integration
-        console.log('Microsoft authentication successful:', userInfo);
-        console.log('Outlook Calendar credentials ready:', calendarCreds);
-        
-        // Store calendar credentials for automatic use
-        localStorage.setItem('microsoft_calendar_credentials', JSON.stringify(calendarCreds));
-        
-        onAuthSuccess();
-      } else {
-        throw new Error('Failed to retrieve user information or calendar access');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Microsoft authentication failed');
-    } finally {
-      setMicrosoftLoading(false);
-    }
+    const updatedTasks = [...state.tasks, newTask];
+    setState(prev => ({ ...prev, tasks: updatedTasks }));
+
+    // Optimize schedule
+    const result = happinessAlgorithm.optimizeSchedule(updatedTasks);
+    setState(prev => ({ ...prev, optimizationResult: result }));
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (error) setError(null);
+  const handleUpdateTask = (updatedTask: Task) => {
+    const updatedTasks = state.tasks.map(task => 
+      task.id === updatedTask.id ? { ...updatedTask, updatedAt: new Date() } : task
+    );
+    setState(prev => ({ ...prev, tasks: updatedTasks }));
+
+    // Re-optimize schedule
+    const result = happinessAlgorithm.optimizeSchedule(updatedTasks);
+    setState(prev => ({ ...prev, optimizationResult: result }));
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    const updatedTasks = state.tasks.filter(task => task.id !== taskId);
+    setState(prev => ({ ...prev, tasks: updatedTasks }));
+
+    // Re-optimize schedule
+    const result = happinessAlgorithm.optimizeSchedule(updatedTasks);
+    setState(prev => ({ ...prev, optimizationResult: result }));
+  };
+
+  const handleApiKeyUpdate = (apiKey: string) => {
+    aiManager.setApiKey(apiKey);
+  };
+
+  if (!state.isAuthenticated) {
+    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
+
+  const navigationItems = [
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'tasks', label: 'Tasks', icon: BarChart3 },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'ai-employees', label: 'AI Team', icon: Bot },
+    { id: 'meetings', label: 'Meetings', icon: Users }
+  ];
+
+  const renderActiveView = () => {
+    switch (state.activeView) {
+      case 'schedule':
+        return state.optimizationResult ? (
+          <ScheduleView optimizationResult={state.optimizationResult} />
+        ) : (
+          <div className="text-center py-12">
+            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              No Schedule Yet
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Add some tasks to generate your optimized schedule
+            </p>
+          </div>
+        );
+      
+      case 'tasks':
+        return (
+          <div className="space-y-6">
+            {state.isMobile ? (
+              <MobileOptimizedTaskForm onAddTask={handleAddTask} />
+            ) : (
+              <TaskForm onAddTask={handleAddTask} />
+            )}
+            <TaskList 
+              tasks={state.tasks}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+            />
+          </div>
+        );
+      
+      case 'analytics':
+        return (
+          <Analytics
+            analyticsManager={analyticsManager}
+            tasks={state.tasks}
+            projects={[]}
+            workspaces={[]}
+            events={[]}
+          />
+        );
+      
+      case 'ai-employees':
+        return <AIEmployees aiManager={aiManager} />;
+      
+      case 'meetings':
+        return (
+          <div className="text-center py-12">
+            <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              Meeting Scheduler
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Coming soon - intelligent meeting scheduling
+            </p>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center transition-colors ${isMobile ? 'p-2' : 'p-4'}`}>
-      <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
-        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 transition-colors ${isMobile ? 'p-6' : 'p-8'}`}>
-          <div className="auth-header">
-            <div className="flex justify-end mb-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              {state.isMobile && (
+                <button
+                  onClick={() => setState(prev => ({ ...prev, showMobileMenu: !prev.showMobileMenu }))}
+                  className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                >
+                  {state.showMobileMenu ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+              )}
+              <div className="text-2xl">🧠</div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Teacher Scheduler AI
+                </h1>
+                {!state.isMobile && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Intelligent Teaching Assistant
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Desktop Navigation */}
+            {!state.isMobile && (
+              <nav className="flex items-center space-x-1">
+                {navigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setState(prev => ({ ...prev, activeView: item.id as any }))}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                        state.activeView === item.id
+                          ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            )}
+
+            {/* Header Actions */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={toggleTheme}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                title={`Switch to ${state.isDark ? 'light' : 'dark'} mode`}
               >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                {state.isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
-            </div>
-            <div className="auth-logo">
-              <div className="text-4xl mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🧠</div>
-              <h1 className={`font-bold text-gray-900 dark:text-white mb-2 ${isMobile ? 'text-xl' : 'text-2xl'}`}>Teacher Scheduler AI</h1>
-              {!isMobile && <p className="text-sm text-gray-600 dark:text-gray-300">Intelligent Teaching Assistant</p>}
-            </div>
-            <p className={`font-medium text-gray-700 dark:text-gray-200 mt-6 mb-8 text-center ${isMobile ? 'text-base' : 'text-lg'}`}>
-              {isSignUp ? 'Create your account' : 'Welcome back, Teacher'}
-            </p>
-          </div>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            {isSignUp && (
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <User className="h-4 w-4 inline mr-2" />
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Enter your full name"
-                  required={isSignUp}
-                />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Mail className="h-4 w-4 inline mr-2" />
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                style={{ fontSize: isMobile ? '16px' : '14px' }}
-                placeholder="Enter your email"
-                required
+              <SettingsComponent 
+                onApiKeyUpdate={handleApiKeyUpdate}
+                currentApiKey={localStorage.getItem('openai_api_key') || undefined}
               />
-            </div>
 
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Lock className="h-4 w-4 inline mr-2" />
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1"
-                  style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className={`p-4 rounded-lg text-sm ${
-                error.includes('Check your email') 
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
-              }`}>
-                {error}
-              </div>
-            )}
-
-            {/* SSO Buttons */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">or</span>
-              </div>
-            </div>
-
-            {/* Google SSO Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all duration-200"
-            >
-              {googleLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-              )}
-              {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
-            </button>
-
-            {/* Microsoft SSO Button */}
-            <button
-              type="button"
-              onClick={handleMicrosoftSignIn}
-              disabled={microsoftLoading}
-              className="w-full bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all duration-200"
-            >
-              {microsoftLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 23 23">
-                  <path d="M0 0h11v11H0z" fill="#f25022"/>
-                  <path d="M12 0h11v11H12z" fill="#7fba00"/>
-                  <path d="M0 12h11v11H0z" fill="#00a4ef"/>
-                  <path d="M12 12h11v11H12z" fill="#ffb900"/>
-                </svg>
-              )}
-              {microsoftLoading ? 'Signing in with Microsoft...' : 'Continue with Microsoft'}
-            </button>
-
-            {googleAuth.isConfigured() && (
-              <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
-                🔒 Automatically connects your calendar and enables AI features
-              </div>
-            )}
-
-            {(!googleAuth.isConfigured() && !microsoftAuth.isConfigured()) && (
-              <div className="text-xs text-center text-yellow-600 dark:text-yellow-400 mt-2">
-                ⚠️ SSO not configured. Contact administrator.
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-[1.02]"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  {isSignUp ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
-                  {isSignUp ? 'Create Account' : 'Sign In'}
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center border-t border-gray-200 dark:border-slate-700 pt-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError(null);
-                  setFormData({ email: '', password: '', fullName: '' });
-                }}
-                className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                onClick={handleSignOut}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                title="Sign Out"
               >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                <LogOut className="h-5 w-5" />
               </button>
-            </p>
+            </div>
           </div>
         </div>
-      </div>
+
+        {/* Mobile Navigation */}
+        {state.isMobile && state.showMobileMenu && (
+          <div className="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <nav className="px-4 py-2 space-y-1">
+              {navigationItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setState(prev => ({ 
+                        ...prev, 
+                        activeView: item.id as any,
+                        showMobileMenu: false
+                      }));
+                    }}
+                    className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center gap-3 ${
+                      state.activeView === item.id
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {renderActiveView()}
+      </main>
+
+      {/* Mobile Bottom Navigation */}
+      {state.isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 px-4 py-2">
+          <div className="flex justify-around">
+            {navigationItems.slice(0, 4).map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setState(prev => ({ ...prev, activeView: item.id as any }))}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors ${
+                    state.activeView === item.id
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-xs">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default Auth;
+export default App;
