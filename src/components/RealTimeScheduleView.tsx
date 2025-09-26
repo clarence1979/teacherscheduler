@@ -5,6 +5,7 @@ import { isSupabaseAvailable } from '../../lib/supabase';
 import { googleAuth } from '../../lib/google-auth';
 import { microsoftAuth } from '../../lib/microsoft-auth';
 import { mobileDetection } from '../utils/mobile-detection';
+import { mobileDetection } from '../utils/mobile-detection';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -17,6 +18,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile] = useState(mobileDetection.isMobile());
   const [isMobile] = useState(mobileDetection.isMobile());
   const [isDark, setIsDark] = useState(() => {
     // Check localStorage first, then system preference
@@ -186,6 +188,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Enter your full name"
                   required={isSignUp}
                 />
@@ -202,6 +205,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
                 placeholder="Enter your email"
                 required
@@ -220,6 +224,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Enter your password"
                   required
                 />
@@ -227,6 +232,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1"
+                  style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
                   style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
