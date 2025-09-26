@@ -6,14 +6,14 @@ import { microsoftAuth } from './lib/microsoft-auth';
 import { mobileDetection } from './utils/mobile-detection';
 
 // Import components
-import Auth from './components/Auth';
-import TaskForm from './components/TaskForm';
-import TaskList from './components/TaskList';
-import ScheduleView from './components/ScheduleView';
-import Analytics from './components/Analytics';
-import AIEmployees from './components/AIEmployees';
-import SettingsComponent from './components/Settings';
-import MobileOptimizedTaskForm from './components/MobileOptimizedTaskForm';
+import Auth from './src/components/Auth';
+import TaskForm from './src/components/TaskForm';
+import TaskList from './src/components/TaskList';
+import ScheduleView from './src/components/ScheduleView';
+import Analytics from './src/components/Analytics';
+import AIEmployees from './src/components/AIEmployees';
+import SettingsComponent from './src/components/Settings';
+import MobileOptimizedTaskForm from './src/components/MobileOptimizedTaskForm';
 
 // Import lib classes
 import { HappinessAlgorithm } from './lib/happiness-algorithm';
