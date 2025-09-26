@@ -1,39 +1,93 @@
-import React, { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, LogIn, UserPlus, Sun, Moon } from 'lucide-react';
-import { auth } from '../../lib/auth';
-import { isSupabaseAvailable } from '../../lib/supabase';
-import { googleAuth } from '../../lib/google-auth';
-import { microsoftAuth } from '../../lib/microsoft-auth';
-import { mobileDetection } from '../utils/mobile-detection';
-import { mobileDetection } from '../utils/mobile-detection';
+import React, { useState, useEffect } from 'react';
+import { Brain, Calendar, CheckCircle, BarChart3, Users, Settings as SettingsIcon, LogOut, Sun, Moon } from 'lucide-react';
+import Auth from './components/Auth';
+import TaskForm from './components/TaskForm';
+import TaskList from './components/TaskList';
+import ScheduleView from './components/ScheduleView';
+import Analytics from './components/Analytics';
+import AIEmployees from './components/AIEmployees';
+import MeetingScheduler from './components/MeetingScheduler';
+import WorkspaceManager from './components/WorkspaceManager';
+import CalendarConnection from './components/CalendarConnection';
+import Settings from './components/Settings';
+import { HappinessAlgorithm } from './lib/happiness-algorithm';
+import { AIEmployeeManager } from './lib/ai-employee-manager';
+import { AnalyticsManager } from './lib/analytics-manager';
+import { WorkspaceManager as WorkspaceManagerClass } from './lib/workspace-manager';
+import { CalendarIntegration } from '../lib/calendar-integration';
+import { RealTimeOptimizer } from '../lib/real-time-optimizer';
+import { auth } from './lib/auth';
+import { isSupabaseAvailable } from './lib/supabase';
+import { googleAuth } from './lib/google-auth';
+import { microsoftAuth } from './lib/microsoft-auth';
+import { mobileDetection } from './utils/mobile-detection';
+import { Task, OptimizationResult, UserSchedule } from '../lib/types';
 
-interface AuthProps {
-  onAuthSuccess: () => void;
-}
+function App() {
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [microsoftLoading, setMicrosoftLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isMobile] = useState(mobileDetection.isMobile());
-  const [isMobile] = useState(mobileDetection.isMobile());
+  // UI state
+  const [activeTab, setActiveTab] = useState('schedule');
   const [isDark, setIsDark] = useState(() => {
-    // Check localStorage first, then system preference
     const saved = localStorage.getItem('theme');
     if (saved) return saved === 'dark';
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    fullName: ''
+  const [isMobile] = useState(mobileDetection.isMobile());
+
+  // Core system state
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult>({
+    schedule: [],
+    happinessScore: 0.8,
+    confidence: 0.9,
+    unscheduledTasks: [],
+    recommendations: [],
+    warnings: []
   });
 
-  // Apply theme on component mount and when isDark changes
-  React.useEffect(() => {
+  // System managers
+  const [happinessAlgorithm] = useState(() => new HappinessAlgorithm());
+  const [aiManager] = useState(() => new AIEmployeeManager());
+  const [analyticsManager] = useState(() => new AnalyticsManager());
+  const [workspaceManager] = useState(() => new WorkspaceManagerClass());
+  const [calendarIntegration] = useState(() => new CalendarIntegration());
+  const [realTimeOptimizer] = useState(() => new RealTimeOptimizer(happinessAlgorithm));
+
+  // Calendar state
+  const [isCalendarConnected, setIsCalendarConnected] = useState(false);
+  const [connectedProvider, setConnectedProvider] = useState<string | undefined>();
+
+  // User schedule configuration
+  const [userSchedule] = useState<UserSchedule>({
+    workingHours: {
+      monday: [9, 17],
+      tuesday: [9, 17],
+      wednesday: [9, 17],
+      thursday: [9, 17],
+      friday: [9, 17]
+    },
+    breakTimes: [
+      { start: '12:00', end: '13:00', name: 'Lunch Break' },
+      { start: '15:00', end: '15:15', name: 'Afternoon Break' }
+    ],
+    preferences: {
+      focusTimeBlocks: 120,
+      bufferBetweenTasks: 15,
+      preferredTaskTimes: {
+        'ASAP': 'morning',
+        'High': 'morning',
+        'Medium': 'afternoon',
+        'Low': 'anytime'
+      }
+    }
+  });
+
+  // Apply theme
+  useEffect(() => {
     const html = document.documentElement;
     if (isDark) {
       html.classList.add('dark');
@@ -45,309 +99,316 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  // Check for stored Microsoft authentication on component mount
-  React.useEffect(() => {
-    if (microsoftAuth.loadStoredTokens()) {
-      console.log('Microsoft authentication restored from storage');
-    }
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Check for stored demo user
+        const demoUser = localStorage.getItem('demo_user');
+        if (demoUser) {
+          const userData = JSON.parse(demoUser);
+          if (userData.loggedIn) {
+            setUser(userData);
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Check Google auth
+        if (googleAuth.loadStoredTokens && googleAuth.loadStoredTokens()) {
+          const googleUser = googleAuth.getCurrentUser();
+          if (googleUser) {
+            setUser(googleUser);
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Check Microsoft auth
+        if (microsoftAuth.loadStoredTokens && microsoftAuth.loadStoredTokens()) {
+          const microsoftUser = microsoftAuth.getCurrentUser();
+          if (microsoftUser) {
+            setUser(microsoftUser);
+            setIsAuthenticated(true);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Check Supabase auth if available
+        if (isSupabaseAvailable()) {
+          const currentUser = await auth.getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
+
+  // Set up real-time optimization
+  useEffect(() => {
+    if (isAuthenticated) {
+      realTimeOptimizer.onScheduleChange((newSchedule) => {
+        setOptimizationResult(newSchedule);
+      });
+
+      return () => {
+        realTimeOptimizer.offScheduleChange(() => {});
+      };
+    }
+  }, [isAuthenticated, realTimeOptimizer]);
+
+  const handleAuthSuccess = () => {
+    setIsAuthenticated(true);
+    setLoading(false);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+      googleAuth.signOut && googleAuth.signOut();
+      microsoftAuth.signOut && microsoftAuth.signOut();
+      localStorage.removeItem('demo_user');
+      setIsAuthenticated(false);
+      setUser(null);
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    }
+  };
+
+  const handleAddTask = async (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId: user?.id || 'demo-user',
+      state: 'To Do',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const updatedTasks = [...tasks, newTask];
+    setTasks(updatedTasks);
+
+    // Trigger optimization
+    const result = happinessAlgorithm.optimizeSchedule(updatedTasks, [], new Date(), 7);
+    setOptimizationResult(result);
+
+    // Track analytics
+    analyticsManager.trackActivity({
+      type: 'task_created',
+      task: newTask.name,
+      priority: newTask.priority,
+      estimatedMinutes: newTask.estimatedMinutes
+    });
+  };
+
+  const handleUpdateTask = async (updatedTask: Task) => {
+    const updatedTasks = tasks.map(task => 
+      task.id === updatedTask.id ? updatedTask : task
+    );
+    setTasks(updatedTasks);
+
+    // Handle real-time optimization for task state changes
+    if (updatedTask.state === 'Done') {
+      await realTimeOptimizer.handleDisruption('task_completed', updatedTask, 'medium');
+    } else if (updatedTask.state === 'In Progress') {
+      analyticsManager.trackActivity({
+        type: 'task_started',
+        task: updatedTask.name,
+        startTime: new Date()
+      });
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    const updatedTasks = tasks.filter(task => task.id !== taskId);
+    setTasks(updatedTasks);
+
+    // Re-optimize schedule
+    const result = happinessAlgorithm.optimizeSchedule(updatedTasks, [], new Date(), 7);
+    setOptimizationResult(result);
+  };
+
+  const handleCalendarConnect = async (provider: string, credentials: any) => {
+    try {
+      const result = await calendarIntegration.connectCalendar(provider, credentials);
+      if (result.success) {
+        setIsCalendarConnected(true);
+        setConnectedProvider(provider);
+        
+        // Start syncing events
+        await calendarIntegration.syncEvents(provider);
+        
+        return { success: true };
+      } else {
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  };
+
+  const handleApiKeyUpdate = (apiKey: string) => {
+    aiManager.setApiKey(apiKey);
+  };
 
   const toggleTheme = () => {
     setIsDark(!isDark);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isSupabaseAvailable()) {
-      setError('Database connection not available. The app will run in demo mode.');
-      // Allow continuing in demo mode after showing error
-      setTimeout(() => {
-        onAuthSuccess();
-      }, 2000);
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading Teacher Scheduler AI...</p>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      if (isSignUp) {
-        await auth.signUp(formData.email, formData.password, formData.fullName);
-        setError('Check your email for the confirmation link!');
-      } else {
-        await auth.signIn(formData.email, formData.password);
-        onAuthSuccess();
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!isAuthenticated) {
+    return <Auth onAuthSuccess={handleAuthSuccess} />;
+  }
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      await googleAuth.signInWithGoogle();
-      
-      // Get user info and calendar credentials
-      const userInfo = googleAuth.getCurrentUser();
-      const calendarCreds = googleAuth.getCalendarCredentials();
-      
-      if (userInfo && calendarCreds) {
-        // Auto-configure calendar integration
-        console.log('Google authentication successful:', userInfo);
-        console.log('Calendar credentials ready:', calendarCreds);
-        
-        // Store calendar credentials for automatic use
-        localStorage.setItem('google_calendar_credentials', JSON.stringify(calendarCreds));
-        
-        onAuthSuccess();
-      } else {
-        throw new Error('Failed to retrieve user information or calendar access');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Google authentication failed');
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const handleMicrosoftSignIn = async () => {
-    setMicrosoftLoading(true);
-    setError(null);
-
-    try {
-      await microsoftAuth.signInWithMicrosoft();
-      
-      // Get user info and calendar credentials
-      const userInfo = microsoftAuth.getCurrentUser();
-      const calendarCreds = microsoftAuth.getCalendarCredentials();
-      
-      if (userInfo && calendarCreds) {
-        // Auto-configure calendar integration
-        console.log('Microsoft authentication successful:', userInfo);
-        console.log('Outlook Calendar credentials ready:', calendarCreds);
-        
-        // Store calendar credentials for automatic use
-        localStorage.setItem('microsoft_calendar_credentials', JSON.stringify(calendarCreds));
-        
-        onAuthSuccess();
-      } else {
-        throw new Error('Failed to retrieve user information or calendar access');
-      }
-    } catch (err: any) {
-      setError(err.message || 'Microsoft authentication failed');
-    } finally {
-      setMicrosoftLoading(false);
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (error) setError(null);
-  };
+  const tabs = [
+    { id: 'schedule', label: 'Schedule', icon: Calendar },
+    { id: 'tasks', label: 'Tasks', icon: CheckCircle },
+    { id: 'ai-employees', label: 'AI Team', icon: Brain },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'meetings', label: 'Meetings', icon: Users }
+  ];
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center transition-colors ${isMobile ? 'p-2' : 'p-4'}`}>
-      <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
-        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 transition-colors ${isMobile ? 'p-6' : 'p-8'}`}>
-          <div className="auth-header">
-            <div className="flex justify-end mb-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">🧠</div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Teacher Scheduler AI</h1>
+                {!isMobile && (
+                  <p className="text-xs text-gray-600 dark:text-gray-400">Intelligent Teaching Assistant</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <CalendarConnection
+                onConnect={handleCalendarConnect}
+                isConnected={isCalendarConnected}
+                connectedProvider={connectedProvider}
+              />
+              
+              <Settings
+                onApiKeyUpdate={handleApiKeyUpdate}
+                currentApiKey={localStorage.getItem('openai_api_key') || undefined}
+              />
+
               <button
                 onClick={toggleTheme}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+                title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
               >
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
-            </div>
-            <div className="auth-logo">
-              <div className="text-4xl mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🧠</div>
-              <h1 className={`font-bold text-gray-900 dark:text-white mb-2 ${isMobile ? 'text-xl' : 'text-2xl'}`}>Teacher Scheduler AI</h1>
-              {!isMobile && <p className="text-sm text-gray-600 dark:text-gray-300">Intelligent Teaching Assistant</p>}
-            </div>
-            <p className={`font-medium text-gray-700 dark:text-gray-200 mt-6 mb-8 text-center ${isMobile ? 'text-base' : 'text-lg'}`}>
-              {isSignUp ? 'Create your account' : 'Welcome back, Teacher'}
-            </p>
-          </div>
 
-          <form onSubmit={handleSubmit} className="auth-form">
-            {isSignUp && (
-              <div className="form-group">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <User className="h-4 w-4 inline mr-2" />
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Enter your full name"
-                  required={isSignUp}
-                />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Mail className="h-4 w-4 inline mr-2" />
-                Email
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                style={{ fontSize: isMobile ? '16px' : '14px' }}
-                style={{ fontSize: isMobile ? '16px' : '14px' }}
-                placeholder="Enter your email"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Lock className="h-4 w-4 inline mr-2" />
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Enter your password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1"
-                  style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
-                  style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {error && (
-              <div className={`p-4 rounded-lg text-sm ${
-                error.includes('Check your email') 
-                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800' 
-                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
-              }`}>
-                {error}
-              </div>
-            )}
-
-            {/* SSO Buttons */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-slate-800 text-gray-500 dark:text-gray-400">or</span>
-              </div>
-            </div>
-
-            {/* Google SSO Button */}
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="w-full bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all duration-200"
-            >
-              {googleLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-              )}
-              {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
-            </button>
-
-            {/* Microsoft SSO Button */}
-            <button
-              type="button"
-              onClick={handleMicrosoftSignIn}
-              disabled={microsoftLoading}
-              className="w-full bg-white dark:bg-slate-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-all duration-200"
-            >
-              {microsoftLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 23 23">
-                  <path d="M0 0h11v11H0z" fill="#f25022"/>
-                  <path d="M12 0h11v11H12z" fill="#7fba00"/>
-                  <path d="M0 12h11v11H0z" fill="#00a4ef"/>
-                  <path d="M12 12h11v11H12z" fill="#ffb900"/>
-                </svg>
-              )}
-              {microsoftLoading ? 'Signing in with Microsoft...' : 'Continue with Microsoft'}
-            </button>
-
-            {googleAuth.isConfigured() && (
-              <div className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
-                🔒 Automatically connects your calendar and enables AI features
-              </div>
-            )}
-
-            {(!googleAuth.isConfigured() && !microsoftAuth.isConfigured()) && (
-              <div className="text-xs text-center text-yellow-600 dark:text-yellow-400 mt-2">
-                ⚠️ SSO not configured. Contact administrator.
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-[1.02]"
-            >
-              {loading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  {isSignUp ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
-                  {isSignUp ? 'Create Account' : 'Sign In'}
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-8 text-center border-t border-gray-200 dark:border-slate-700 pt-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {isSignUp ? 'Already have an account?' : "Don't have an account?"}
               <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError(null);
-                  setFormData({ email: '', password: '', fullName: '' });
-                }}
-                className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
+                onClick={handleSignOut}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                title="Sign Out"
               >
-                {isSignUp ? 'Sign In' : 'Sign Up'}
+                <LogOut className="h-5 w-5" />
               </button>
-            </p>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Navigation */}
+      <nav className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-8 overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {!isMobile && tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'schedule' && (
+          <div className="space-y-6">
+            <TaskForm onAddTask={handleAddTask} />
+            <ScheduleView optimizationResult={optimizationResult} />
+          </div>
+        )}
+
+        {activeTab === 'tasks' && (
+          <div className="space-y-6">
+            <WorkspaceManager
+              workspaceManager={workspaceManager}
+              onWorkspaceChange={(workspaceId) => console.log('Workspace changed:', workspaceId)}
+              onTasksUpdate={setTasks}
+            />
+            <TaskList
+              tasks={tasks}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+            />
+          </div>
+        )}
+
+        {activeTab === 'ai-employees' && (
+          <AIEmployees aiManager={aiManager} />
+        )}
+
+        {activeTab === 'analytics' && (
+          <Analytics
+            analyticsManager={analyticsManager}
+            tasks={tasks}
+            projects={[]}
+            workspaces={[]}
+            events={[]}
+          />
+        )}
+
+        {activeTab === 'meetings' && (
+          <MeetingScheduler
+            userSchedule={userSchedule}
+            onMeetingBooked={(meeting) => console.log('Meeting booked:', meeting)}
+          />
+        )}
+      </main>
     </div>
   );
-};
+}
 
-export default Auth;
+export default App;

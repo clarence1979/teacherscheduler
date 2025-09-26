@@ -6,15 +6,18 @@ export class WorkspaceManager {
     this.loadWorkspaces();
   }
   
-  createWorkspace(name: string, description?: string) {
+  createWorkspace(workspaceData: any) {
     const workspace = {
       id: `ws_${Date.now()}`,
-      name,
-      description: description || '',
+      name: workspaceData.name,
+      description: workspaceData.description || '',
+      type: workspaceData.type || 'individual',
+      color: workspaceData.color || '#007bff',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       tasks: [],
       members: [],
+      projects: [],
       settings: {
         autoSchedule: true,
         aiAssistance: true,
@@ -25,18 +28,36 @@ export class WorkspaceManager {
     this.workspaces.push(workspace);
     this.saveWorkspaces();
     
-    console.log(`📁 Created workspace: ${name}`);
+    console.log(`📁 Created workspace: ${workspace.name}`);
     return workspace;
   }
 
-  getWorkspaces() {
+  getAllWorkspaces() {
     return this.workspaces;
+  }
+
+  getProjectsInWorkspace(workspaceId: string) {
+    const workspace = this.workspaces.find(ws => ws.id === workspaceId);
+    return workspace?.projects || [];
+  }
+
+  getTasksInProject(projectId: string) {
+    // For demo purposes, return empty array
+    return [];
+  }
+
+  calculateProjectProgress(projectId: string): number {
+    // For demo purposes, return random progress
+    return Math.floor(Math.random() * 100);
   }
 
   getCurrentWorkspace() {
     if (!this.currentWorkspaceId) {
       if (this.workspaces.length === 0) {
-        const defaultWorkspace = this.createWorkspace('My Teaching Tasks', 'Default workspace for managing daily teaching activities');
+        const defaultWorkspace = this.createWorkspace({
+          name: 'My Teaching Tasks',
+          description: 'Default workspace for managing daily teaching activities'
+        });
         this.setCurrentWorkspace(defaultWorkspace.id);
         return defaultWorkspace;
       }
@@ -55,6 +76,32 @@ export class WorkspaceManager {
       return true;
     }
     return false;
+  }
+
+  createProject(projectData: any, workspaceId: string) {
+    const project = {
+      id: `proj_${Date.now()}`,
+      workspaceId,
+      name: projectData.name,
+      description: projectData.description || '',
+      status: projectData.status || 'Planning',
+      priority: projectData.priority || 'Medium',
+      startDate: projectData.startDate || new Date(),
+      dueDate: projectData.dueDate || null,
+      progress: 0,
+      tags: projectData.tags || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const workspace = this.workspaces.find(ws => ws.id === workspaceId);
+    if (workspace) {
+      workspace.projects.push(project);
+      workspace.updatedAt = new Date().toISOString();
+      this.saveWorkspaces();
+    }
+
+    return project;
   }
 
   addTaskToWorkspace(workspaceId: string, task: any) {
