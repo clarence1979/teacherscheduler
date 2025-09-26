@@ -1,16 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Calendar, 
-  BarChart3, 
-  Bot, 
-  Users, 
-  SettingsIcon as Settings,
-  Menu,
-  X,
-  Sun,
-  Moon,
-  LogOut
-} from 'lucide-react';
+import { Calendar, BarChart3, Bot, Users, Settings as Settings, Menu, X, Sun, Moon, LogOut } from 'lucide-react';
 import { auth, isSupabaseAvailable } from './lib/auth';
 import { googleAuth } from './lib/google-auth';
 import { microsoftAuth } from './lib/microsoft-auth';
