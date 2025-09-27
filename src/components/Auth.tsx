@@ -153,8 +153,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
             </div>
             <div className="auth-logo">
               <div className="text-4xl mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🧠</div>
-              <h1 className="text-2xl font-bold text-white dark:text-white mb-2">Teacher Scheduler AI</h1>
-              <p className="text-sm text-gray-200 dark:text-gray-300">Intelligent Teaching Assistant</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Teacher Scheduler AI</h1>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Intelligent Teaching Assistant</p>
             </div>
             <p className="text-lg font-medium text-gray-700 dark:text-gray-200 mt-6 mb-8 text-center">
               {isSignUp ? 'Create your account' : 'Welcome back, Teacher'}
