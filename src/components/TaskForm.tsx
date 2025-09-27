@@ -82,7 +82,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
               placeholder="What do you need to do?"
               value={formData.name}
               onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full text-lg border-0 border-b-2 border-gray-200 dark:border-slate-600 focus:border-blue-500 focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 py-3 px-0 bg-transparent text-gray-900 dark:text-white"
+              className="task-name-input w-full text-lg border-0 border-b-2 border-gray-200 dark:border-slate-600 focus:border-blue-500 focus:ring-0 placeholder-gray-400 dark:placeholder-gray-500 py-3 px-0"
               required
             />
           </div>
