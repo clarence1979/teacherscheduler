@@ -70,31 +70,8 @@ export class AuthService {
         return null;
       }
 
-      // Test Supabase connection first
-      const connectionTest = await Promise.race([
-        fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/`, {
-          method: 'HEAD',
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-          }
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Supabase connection timeout')), 5000)
-        )
-      ]) as Response;
-
-      if (!connectionTest.ok && connectionTest.status !== 401) {
-        throw new Error(`Supabase connection failed: ${connectionTest.status} ${connectionTest.statusText}`);
-      }
-
-      // Now try to get the user
-      const { data: { user }, error } = await Promise.race([
-        supabase!.auth.getUser(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication timeout')), 8000)
-        )
-      ]) as any;
+      // Get the user with a reasonable timeout
+      const { data: { user }, error } = await supabase!.auth.getUser();
       
       if (error) {
         if (error.message === 'Auth session missing!') {
@@ -128,11 +105,7 @@ export class AuthService {
         };
       }
     } catch (error) {
-      if (error.message?.includes('timeout')) {
-        console.error('Authentication service timeout:', error);
-      } else {
-        console.error('getCurrentUser error:', error);
-      }
+      console.error('getCurrentUser error:', error);
       return null;
     }
   }
