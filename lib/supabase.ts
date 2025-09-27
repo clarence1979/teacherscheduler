@@ -3,21 +3,53 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// Debug logging for environment variables
+console.log('Supabase Environment Check:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlValid: supabaseUrl && supabaseUrl.startsWith('https://') && supabaseUrl.includes('.supabase.co'),
+  keyValid: supabaseAnonKey && supabaseAnonKey.startsWith('eyJ')
+});
+
 // Only create Supabase client if we have valid environment variables
 export const supabase = (supabaseUrl && 
                         supabaseAnonKey && 
                         supabaseUrl !== 'your_supabase_url_here' && 
-                        supabaseAnonKey !== 'your_supabase_anon_key_here') 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+                        supabaseAnonKey !== 'your_supabase_anon_key_here' &&
+                        supabaseUrl.startsWith('https://') &&
+                        supabaseUrl.includes('.supabase.co') &&
+                        supabaseAnonKey.startsWith('eyJ')) 
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'teacher-scheduler-ai'
+        }
+      }
+    })
   : null
 
 // Helper function to check if Supabase is available
 export const isSupabaseAvailable = () => {
-  return supabase !== null && 
-         import.meta.env.VITE_SUPABASE_URL && 
-         import.meta.env.VITE_SUPABASE_ANON_KEY &&
-         import.meta.env.VITE_SUPABASE_URL !== 'your_supabase_url_here' &&
-         import.meta.env.VITE_SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here'
+  const isAvailable = supabase !== null && 
+                     import.meta.env.VITE_SUPABASE_URL && 
+                     import.meta.env.VITE_SUPABASE_ANON_KEY &&
+                     import.meta.env.VITE_SUPABASE_URL !== 'your_supabase_url_here' &&
+                     import.meta.env.VITE_SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here';
+  
+  if (!isAvailable) {
+    console.warn('Supabase not available:', {
+      hasClient: !!supabase,
+      url: import.meta.env.VITE_SUPABASE_URL,
+      keyPrefix: import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 10) + '...'
+    });
+  }
+  
+  return isAvailable;
 }
 
 // Database types
