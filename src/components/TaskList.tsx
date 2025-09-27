@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Clockimport { Clock, Calendar, Target, CreditCard as Edit2, Trash2, PlayCircle } from 'lucide-react'k } from '../../lib/types';
+import { Clock, Calendar, Target, Edit2, Trash2, PlayCircle } from 'lucide-react';
+import { Task } from '../../lib/types';
 
 interface TaskListProps {
   tasks: Task[];
