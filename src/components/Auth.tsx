@@ -55,18 +55,21 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Always run in demo mode for now since database isn't configured
-    console.log('Running in demo mode - skipping database authentication');
-    onAuthSuccess();
-    return;
-    
     setLoading(true);
     setError(null);
+
+    // Check if Supabase is available
+    if (!isSupabaseAvailable()) {
+      setError('Database connection not available. Please configure Supabase environment variables.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (isSignUp) {
         await auth.signUp(formData.email, formData.password, formData.fullName);
-        setError('Check your email for the confirmation link!');
+        setError('Account created successfully! You can now sign in.');
+        setIsSignUp(false);
       } else {
         await auth.signIn(formData.email, formData.password);
         onAuthSuccess();
@@ -79,15 +82,39 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   const handleGoogleSignIn = async () => {
-    // For demo mode, simulate successful Google login
-    console.log('Demo mode: Simulating Google authentication');
-    onAuthSuccess();
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      if (!googleAuth.isConfigured()) {
+        throw new Error('Google OAuth not configured. Please contact your administrator.');
+      }
+
+      await googleAuth.signInWithGoogle();
+      onAuthSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Google sign-in failed');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const handleMicrosoftSignIn = async () => {
-    // For demo mode, simulate successful Microsoft login
-    console.log('Demo mode: Simulating Microsoft authentication');
-    onAuthSuccess();
+    setMicrosoftLoading(true);
+    setError(null);
+
+    try {
+      if (!microsoftAuth.isConfigured()) {
+        throw new Error('Microsoft OAuth not configured. Please contact your administrator.');
+      }
+
+      await microsoftAuth.signInWithMicrosoft();
+      onAuthSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Microsoft sign-in failed');
+    } finally {
+      setMicrosoftLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
