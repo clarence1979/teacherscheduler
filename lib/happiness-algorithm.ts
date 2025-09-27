@@ -171,7 +171,7 @@ export class HappinessAlgorithm {
    */
   private generateDayTimeSlots(date: Date, existingEvents: Event[]): TimeSlot[] {
     const slots: TimeSlot[] = [];
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'lowercase' }) as keyof UserSchedule['workingHours'];
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase() as keyof UserSchedule['workingHours'];
     const workHours = this.userSchedule.workingHours[dayName];
     
     if (!workHours) return []; // No work hours defined for this day
