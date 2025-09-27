@@ -73,7 +73,7 @@ export class AuthService {
       const { data: { user }, error } = await Promise.race([
         supabase!.auth.getUser(),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication service timeout - please check your network connection or Supabase configuration')), 3000)
+          setTimeout(() => reject(new Error('Authentication service timeout - please check your network connection or Supabase configuration')), 10000)
         )
       ]) as any;
       
