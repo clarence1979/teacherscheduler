@@ -152,6 +152,7 @@ const CalendarConnection: React.FC<CalendarConnectionProps> = ({
           onClose={() => setShowModal(false)}
           onGoogleConnect={handleGoogleConnect}
           onMicrosoftConnect={handleMicrosoftConnect}
+          onDemoConnect={handleDemoConnect}
           onManualConnect={handleManualConnect}
           isConnecting={isConnecting}
           error={error}
@@ -166,10 +167,11 @@ const CalendarConnectionModal: React.FC<{
   onClose: () => void;
   onGoogleConnect: () => void;
   onMicrosoftConnect: () => void;
+  onDemoConnect: () => void;
   onManualConnect: (provider: string, credentials: any) => void;
   isConnecting: boolean;
   error: string | null;
-}> = ({ onClose, onGoogleConnect, onMicrosoftConnect, onManualConnect, isConnecting, error }) => {
+}> = ({ onClose, onGoogleConnect, onMicrosoftConnect, onDemoConnect, onManualConnect, isConnecting, error }) => {
   const [connectionMethod, setConnectionMethod] = useState<'google' | 'microsoft' | 'manual'>('google');
   const [provider, setProvider] = useState('google');
   const [credentials, setCredentials] = useState({
@@ -392,7 +394,7 @@ const CalendarConnectionModal: React.FC<{
           {connectionMethod === 'google' ? (
             <button 
               className="btn btn-primary"
-              onClick={googleAuth.isConfigured() ? onGoogleConnect : handleDemoConnect}
+              onClick={googleAuth.isConfigured() ? onGoogleConnect : onDemoConnect}
               disabled={isConnecting}
             >
               {isConnecting ? 'Connecting...' : googleAuth.isConfigured() ? 'Connect with Google' : 'Connect with Demo Mode'}
