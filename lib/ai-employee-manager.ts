@@ -919,6 +919,24 @@ Period 2: 8:50-9:35 AM
     this.listeners.delete(callback);
   }
 
+  approveWorkflow(workflowId: string): void {
+    const workflow = this.workflows.get(workflowId);
+    if (workflow) {
+      workflow.status = 'completed';
+      workflow.completedAt = new Date();
+      this.notifyListeners(workflow);
+    }
+  }
+
+  rejectWorkflow(workflowId: string): void {
+    const workflow = this.workflows.get(workflowId);
+    if (workflow) {
+      workflow.status = 'failed';
+      workflow.completedAt = new Date();
+      this.notifyListeners(workflow);
+    }
+  }
+
   private notifyListeners(workflow: AIWorkflow): void {
     this.listeners.forEach(callback => callback(workflow));
   }

@@ -48,6 +48,22 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager }) => {
     }
   };
 
+  const handleApproveWorkflow = (workflowId: string) => {
+    aiManager.approveWorkflow(workflowId);
+  };
+
+  const handleReviewWorkflow = (workflowId: string) => {
+    const workflow = workflows.find(w => w.id === workflowId);
+    if (workflow) {
+      setReviewingWorkflow(workflow);
+    }
+  };
+
+  const handleRejectWorkflow = (workflowId: string) => {
+    aiManager.rejectWorkflow(workflowId);
+    setReviewingWorkflow(null);
+  };
+
   const getStatusColor = (status: string) => {
     const colors = {
       'queued': 'text-yellow-600 bg-yellow-50',
@@ -276,6 +292,19 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager }) => {
             setSelectedEmployee(null);
           }}
           onExecute={handleExecuteWorkflow}
+        />
+      )}
+
+      {/* Review Modal */}
+      {reviewingWorkflow && (
+        <ReviewModal
+          workflow={reviewingWorkflow}
+          onClose={() => setReviewingWorkflow(null)}
+          onApprove={() => {
+            handleApproveWorkflow(reviewingWorkflow.id);
+            setReviewingWorkflow(null);
+          }}
+          onReject={() => handleRejectWorkflow(reviewingWorkflow.id)}
         />
       )}
     </div>
