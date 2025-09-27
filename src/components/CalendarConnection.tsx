@@ -18,6 +18,30 @@ const CalendarConnection: React.FC<CalendarConnectionProps> = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleDemoConnect = async () => {
+    setIsConnecting(true);
+    setError(null);
+
+    try {
+      // Simulate successful connection with demo data
+      const demoCredentials = {
+        apiKey: 'demo-api-key',
+        accessToken: 'demo-access-token'
+      };
+
+      const result = await onConnect('google', demoCredentials);
+      if (result.success) {
+        setShowModal(false);
+      } else {
+        setError(result.error || 'Demo connection failed');
+      }
+    } catch (err) {
+      setError('Demo connection failed. Please try again.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleGoogleConnect = async () => {
     setIsConnecting(true);
     setError(null);
@@ -245,7 +269,14 @@ const CalendarConnectionModal: React.FC<{
                 </ul>
               </div>
               
-              {!googleAuth.isConfigured() && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-800 mb-2">🎯 Demo Mode Available</h4>
+                <p className="text-sm text-blue-700">
+                  Since OAuth isn't configured, you can use demo mode to test calendar integration features.
+                </p>
+              </div>
+              
+              {!googleAuth.isConfigured() && false && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <h4 className="font-medium text-yellow-800 mb-2">⚠️ Configuration Required</h4>
                   <p className="text-sm text-yellow-700">
@@ -361,10 +392,10 @@ const CalendarConnectionModal: React.FC<{
           {connectionMethod === 'google' ? (
             <button 
               className="btn btn-primary"
-              onClick={onGoogleConnect}
-              disabled={isConnecting || !googleAuth.isConfigured()}
+              onClick={googleAuth.isConfigured() ? onGoogleConnect : handleDemoConnect}
+              disabled={isConnecting}
             >
-              {isConnecting ? 'Connecting...' : 'Connect with Google'}
+              {isConnecting ? 'Connecting...' : googleAuth.isConfigured() ? 'Connect with Google' : 'Connect with Demo Mode'}
             </button>
           ) : connectionMethod === 'microsoft' ? (
             <button 
