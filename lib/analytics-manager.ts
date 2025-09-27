@@ -59,6 +59,12 @@ export class AnalyticsManager {
     this.projects = projects;
     this.workspaces = workspaces;
     this.events = events;
+    console.log('Analytics data updated:', { 
+      tasks: tasks.length, 
+      projects: projects.length, 
+      workspaces: workspaces.length, 
+      events: events.length 
+    });
   }
 
   // Generate comprehensive analytics report
@@ -78,6 +84,7 @@ export class AnalyticsManager {
   }
 
   private calculateProductivityMetrics(tasks: Task[]): ProductivityMetrics {
+    console.log('Calculating productivity metrics for', tasks.length, 'tasks');
     const completedTasks = tasks.filter(task => task.state === 'Done');
     const totalTasks = tasks.length;
     
@@ -110,11 +117,20 @@ export class AnalyticsManager {
   private calculateTimeDistribution(tasks: Task[], events: Event[]): TimeDistribution[] {
     const categories = new Map<string, number>();
     
+    console.log('Calculating time distribution for', tasks.length, 'tasks and', events.length, 'events');
+    
     // Categorize completed tasks
     tasks.filter(task => task.state === 'Done').forEach(task => {
       const category = this.categorizeTask(task);
-      const time = task.actualMinutes || task.estimatedMinutes;
+      const time = task.actualMinutes || task.estimatedMinutes || 0;
       categories.set(category, (categories.get(category) || 0) + time);
+    });
+
+    // Also include in-progress and to-do tasks for better visibility
+    tasks.filter(task => task.state !== 'Done').forEach(task => {
+      const category = this.categorizeTask(task);
+      const time = task.estimatedMinutes || 0;
+      categories.set(category + ' (Planned)', (categories.get(category + ' (Planned)') || 0) + time);
     });
 
     // Add events
@@ -339,10 +355,13 @@ export class AnalyticsManager {
   }
 
   private filterTasksByDateRange(dateRange: { start: Date; end: Date }): Task[] {
-    return this.tasks.filter(task => {
+    const filtered = this.tasks.filter(task => {
       const taskDate = new Date(task.createdAt);
-      return taskDate >= dateRange.start && taskDate <= dateRange.end;
+      const isInRange = taskDate >= dateRange.start && taskDate <= dateRange.end;
+      return isInRange;
     });
+    console.log(`Filtered ${filtered.length} tasks from ${this.tasks.length} total for period ${dateRange.start.toDateString()} to ${dateRange.end.toDateString()}`);
+    return filtered;
   }
 
   private filterEventsByDateRange(dateRange: { start: Date; end: Date }): Event[] {

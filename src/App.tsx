@@ -482,8 +482,8 @@ const App: React.FC = () => {
           <Analytics
             analyticsManager={analyticsManager}
             tasks={tasks}
-            projects={[]}
-            workspaces={[]}
+            projects={workspaceManager.getAllWorkspaces().flatMap(w => workspaceManager.getProjectsInWorkspace(w.id))}
+            workspaces={workspaceManager.getAllWorkspaces()}
             events={events}
           />
         )}

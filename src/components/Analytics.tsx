@@ -25,6 +25,7 @@ const Analytics: React.FC<AnalyticsProps> = ({
   useEffect(() => {
     const updateAnalytics = () => {
       setLoading(true);
+      // Update analytics manager with current data
       analyticsManager.updateData(tasks, projects, workspaces, events);
       const newReport = analyticsManager.generateReport(selectedPeriod);
       setReport(newReport);
