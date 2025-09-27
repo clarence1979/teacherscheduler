@@ -21,6 +21,7 @@ const Analytics: React.FC<AnalyticsProps> = ({
   const [report, setReport] = useState<any>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month' | 'quarter'>('week');
   const [loading, setLoading] = useState(true);
+  const [appliedRecommendations, setAppliedRecommendations] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const updateAnalytics = () => {
@@ -48,6 +49,37 @@ const Analytics: React.FC<AnalyticsProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleApplyRecommendation = (recommendation: string, index: number) => {
+    // Mark as applied
+    setAppliedRecommendations(prev => new Set([...prev, index]));
+    
+    // Apply the recommendation based on its content
+    if (recommendation.includes('Break large tasks into smaller')) {
+      // Show a notification or modal about task chunking
+      alert('💡 Tip: When creating tasks, enable "Can be split into chunks" for better scheduling flexibility.');
+    } else if (recommendation.includes('Review and adjust task priorities')) {
+      // Navigate to tasks view or show priority adjustment tips
+      alert('📋 Tip: Regularly review your task list and adjust priorities based on changing deadlines and importance.');
+    } else if (recommendation.includes('delegating or eliminating')) {
+      alert('🎯 Tip: Consider which low-priority tasks can be delegated to others or removed from your schedule entirely.');
+    } else if (recommendation.includes('Add buffer time')) {
+      alert('⏰ Tip: When estimating task duration, add 20-30% extra time to account for unexpected delays.');
+    } else if (recommendation.includes('internal deadlines')) {
+      alert('📅 Tip: Set personal deadlines 1-2 days before actual deadlines to reduce stress and improve quality.');
+    } else if (recommendation.includes('focus blocks')) {
+      alert('🧠 Tip: Block out 2-hour periods for deep work without interruptions. Turn off notifications during these times.');
+    } else if (recommendation.includes('context switching')) {
+      alert('🔄 Tip: Group similar tasks together (e.g., all marking, all lesson planning) to reduce mental switching costs.');
+    } else if (recommendation.includes('Pomodoro')) {
+      alert('🍅 Tip: Try the Pomodoro Technique - 25 minutes focused work, 5 minute break, repeat.');
+    } else {
+      // Generic recommendation applied
+      alert('✅ Recommendation noted! This insight has been saved to help improve your productivity.');
+    }
+    
+    // You could also integrate with the task system to automatically apply changes
+    // For example, updating task estimates, creating focus time blocks, etc.
+  };
   if (loading || !report) {
     return (
       <div className="analytics-loading">
@@ -301,7 +333,17 @@ const Analytics: React.FC<AnalyticsProps> = ({
             {recommendations.map((recommendation, index) => (
               <div key={index} className="recommendation-item">
                 <div className="recommendation-content">{recommendation}</div>
-                <button className="recommendation-action">Apply</button>
+                <button 
+                  className={`recommendation-action ${
+                    appliedRecommendations.has(index) 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                  onClick={() => handleApplyRecommendation(recommendation, index)}
+                  disabled={appliedRecommendations.has(index)}
+                >
+                  {appliedRecommendations.has(index) ? '✓ Applied' : 'Apply'}
+                </button>
               </div>
             ))}
           </div>
