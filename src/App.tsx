@@ -29,6 +29,7 @@ import { User as AuthUser } from '../lib/auth';
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialAuthError, setInitialAuthError] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'schedule' | 'tasks' | 'workspaces' | 'meetings' | 'analytics' | 'ai-employees'>('schedule');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -144,6 +145,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
+      setInitialAuthError(error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -336,7 +338,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <Auth onAuthSuccess={handleAuthSuccess} />;
+    return <Auth onAuthSuccess={handleAuthSuccess} initialError={initialAuthError} />;
   }
 
   return (

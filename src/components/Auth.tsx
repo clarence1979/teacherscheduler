@@ -7,15 +7,16 @@ import { microsoftAuth } from '../../lib/microsoft-auth';
 
 interface AuthProps {
   onAuthSuccess: () => void;
+  initialError?: string | null;
 }
 
-const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
+const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [isDark, setIsDark] = useState(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem('theme');
@@ -47,6 +48,13 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
       console.log('Microsoft authentication restored from storage');
     }
   }, []);
+
+  // Update error state when initialError prop changes
+  React.useEffect(() => {
+    if (initialError) {
+      setError(initialError);
+    }
+  }, [initialError]);
 
   const toggleTheme = () => {
     setIsDark(!isDark);
