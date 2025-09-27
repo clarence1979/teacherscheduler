@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Calendar, Target, Edit2, Trash2, PlayCircle } from 'lucide-react';
-import { Task } from '../../lib/types';
+import { Clockimport { Clock, Calendar, Target, CreditCard as Edit2, Trash2, PlayCircle } from 'lucide-react'k } from '../../lib/types';
 
 interface TaskListProps {
   tasks: Task[];
@@ -358,5 +357,7 @@ const EditTaskModal: React.FC<{
         </form>
       </div>
     </div>
-    </>
+  );
+};
+
 export default TaskList;
