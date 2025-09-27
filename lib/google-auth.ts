@@ -45,7 +45,9 @@ export class GoogleAuthService {
 
   // Check if Google OAuth is configured
   isConfigured(): boolean {
-    return !!(this.config.clientId && this.config.clientSecret);
+    const hasClientId = this.config.clientId && this.config.clientId !== 'your_google_client_id_here';
+    const hasClientSecret = this.config.clientSecret && this.config.clientSecret !== 'your_google_client_secret_here';
+    return !!(hasClientId && hasClientSecret);
   }
 
   // Initiate Google OAuth flow

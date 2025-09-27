@@ -23,6 +23,11 @@ const CalendarConnection: React.FC<CalendarConnectionProps> = ({
     setError(null);
 
     try {
+      // Check if Google OAuth is configured
+      if (!googleAuth.isConfigured()) {
+        throw new Error('Google OAuth not configured. Please contact your administrator to set up Google integration.');
+      }
+
       // Check if already authenticated with Google
       if (!googleAuth.isAuthenticated()) {
         await googleAuth.signInWithGoogle();
@@ -40,7 +45,7 @@ const CalendarConnection: React.FC<CalendarConnectionProps> = ({
         setError(result.error || 'Connection failed');
       }
     } catch (err) {
-      setError('Google Calendar connection failed. Please try again.');
+      setError((err as Error).message || 'Google Calendar connection failed. Please try again.');
     } finally {
       setIsConnecting(false);
     }
@@ -240,6 +245,19 @@ const CalendarConnectionModal: React.FC<{
                 </ul>
               </div>
               
+              {!googleAuth.isConfigured() && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="font-medium text-yellow-800 mb-2">⚠️ Configuration Required</h4>
+                  <p className="text-sm text-yellow-700">
+                    Google OAuth is not configured. Please contact your administrator to set up:
+                  </p>
+                  <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                    <li>• VITE_GOOGLE_CLIENT_ID environment variable</li>
+                    <li>• VITE_GOOGLE_CLIENT_SECRET environment variable</li>
+                  </ul>
+                </div>
+              )}
+              
               {error && (
                 <div className="error-message">
                   <AlertCircle className="h-4 w-4" />
@@ -344,7 +362,7 @@ const CalendarConnectionModal: React.FC<{
             <button 
               className="btn btn-primary"
               onClick={onGoogleConnect}
-              disabled={isConnecting}
+              disabled={isConnecting || !googleAuth.isConfigured()}
             >
               {isConnecting ? 'Connecting...' : 'Connect with Google'}
             </button>
@@ -352,7 +370,7 @@ const CalendarConnectionModal: React.FC<{
             <button 
               className="btn btn-primary"
               onClick={onMicrosoftConnect}
-              disabled={isConnecting}
+              disabled={isConnecting || !microsoftAuth.isConfigured()}
             >
               {isConnecting ? 'Connecting...' : 'Connect with Microsoft'}
             </button>
