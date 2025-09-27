@@ -505,4 +505,78 @@ const getWorkflowParameters = (workflowType: string) => {
   return parameterMap[workflowType] || [];
 };
 
+// Review Modal Component
+const ReviewModal: React.FC<{
+  workflow: any;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+}> = ({ workflow, onClose, onApprove, onReject }) => {
+  const employee = workflow.employee || { name: 'AI Employee', avatar: '🤖' };
+  
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Review AI Workflow Result</h3>
+          <button onClick={onClose} className="modal-close">×</button>
+        </div>
+
+        <div className="modal-body">
+          <div className="mb-4">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-2xl">{employee.avatar}</span>
+              <div>
+                <h4 className="font-semibold text-gray-900">{employee.name}</h4>
+                <p className="text-sm text-gray-600">
+                  {workflow.workflowType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <h5 className="font-medium text-gray-900 mb-2">Generated Content:</h5>
+            <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+              {workflow.result?.output?.content || 
+               (typeof workflow.result?.output === 'string' ? workflow.result.output : 
+                JSON.stringify(workflow.result?.output, null, 2))}
+            </div>
+          </div>
+
+          {workflow.result?.confidence && (
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-1">
+                <span>Confidence Score</span>
+                <span>{Math.round(workflow.result.confidence * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full" 
+                  style={{ width: `${workflow.result.confidence * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onReject}
+              className="btn btn-secondary flex-1"
+            >
+              Reject & Regenerate
+            </button>
+            <button
+              onClick={onApprove}
+              className="btn btn-success flex-1"
+            >
+              Approve & Use
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default AIEmployees;
