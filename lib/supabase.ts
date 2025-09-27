@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Only create Supabase client if we have valid environment variables
-export const supabase = (supabaseUrl !== 'https://placeholder.supabase.co' && 
+export const supabase = (supabaseUrl && 
+                        supabaseAnonKey && 
                         supabaseUrl !== 'your_supabase_url_here' && 
-                        supabaseAnonKey !== 'placeholder-key') 
+                        supabaseAnonKey !== 'your_supabase_anon_key_here') 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null
 
@@ -16,7 +17,7 @@ export const isSupabaseAvailable = () => {
          import.meta.env.VITE_SUPABASE_URL && 
          import.meta.env.VITE_SUPABASE_ANON_KEY &&
          import.meta.env.VITE_SUPABASE_URL !== 'your_supabase_url_here' &&
-         import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co'
+         import.meta.env.VITE_SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here'
 }
 
 // Database types

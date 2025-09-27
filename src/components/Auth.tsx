@@ -60,7 +60,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
     // Check if Supabase is available
     if (!isSupabaseAvailable()) {
-      setError('Database connection not available. Please configure Supabase environment variables.');
+      setError('Database connection not available. Please configure your Supabase URL and API key in the .env file, then restart the development server.');
       setLoading(false);
       return;
     }
