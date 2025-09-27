@@ -32,7 +32,7 @@ export class GoogleAuthService {
     this.config = {
       clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
       clientSecret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || '',
-      redirectUri: `${window.location.origin}/auth/google/callback.html`,
+      redirectUri: `${window.location.origin}/auth/google/callback`,
       scopes: [
         'openid',
         'email',

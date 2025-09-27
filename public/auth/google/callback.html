@@ -60,7 +60,7 @@
         if (error) {
             // Handle OAuth error
             document.getElementById('error').style.display = 'block';
-            document.getElementById('error').textContent = `Authentication failed: ${errorDescription || error}`;
+            document.getElementById('error').textContent = `Authentication failed: ${decodeURIComponent(errorDescription || error)}`;
             
             // Send error to parent window
             if (window.opener) {
