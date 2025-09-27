@@ -15,6 +15,7 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager }) => {
     type: '',
     parameters: {} as Record<string, any>
   });
+  const [reviewingWorkflow, setReviewingWorkflow] = useState<any | null>(null);
 
   useEffect(() => {
     const handleWorkflowUpdate = (workflow: any) => {
@@ -243,8 +244,18 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager }) => {
 
                       {workflow.status === 'requires_approval' && (
                         <div className="workflow-actions">
-                          <button className="btn btn-sm btn-success">Approve</button>
-                          <button className="btn btn-sm btn-secondary">Review</button>
+                          <button 
+                            onClick={() => handleApproveWorkflow(workflow.id)}
+                            className="btn btn-sm btn-success"
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            onClick={() => handleReviewWorkflow(workflow.id)}
+                            className="btn btn-sm btn-secondary"
+                          >
+                            Review
+                          </button>
                         </div>
                       )}
                     </div>
