@@ -56,11 +56,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
     e.preventDefault();
     
     if (!isSupabaseAvailable()) {
-      setError('Database connection not available. The app will run in demo mode.');
-      // Allow continuing in demo mode after showing error
-      setTimeout(() => {
-        onAuthSuccess();
-      }, 2000);
+      // Skip database authentication in demo mode
+      console.log('Running in demo mode - skipping database authentication');
+      onAuthSuccess();
       return;
     }
     
