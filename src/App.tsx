@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Menu, X, Bell, Settings as SettingsIcon, User, ChevronDown } from 'lucide-react';
 import { auth } from '../lib/auth';
 import { isSupabaseAvailable } from '../lib/supabase';
+import { db } from '../lib/database';
 import { googleAuth } from '../lib/google-auth';
 import { microsoftAuth } from '../lib/microsoft-auth';
 import { HappinessAlgorithm } from '../lib/happiness-algorithm';
@@ -28,6 +29,7 @@ import { User as AuthUser } from '../lib/auth';
 const App: React.FC = () => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const [currentView, setCurrentView] = useState<'schedule' | 'tasks' | 'workspaces' | 'meetings' | 'analytics' | 'ai-employees'>('schedule');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -73,6 +75,16 @@ const App: React.FC = () => {
   useEffect(() => {
     checkAuth();
     
+    // Set up auth state listener
+    const { data: { subscription } } = auth.onAuthStateChange(async (user) => {
+      setUser(user);
+      if (user) {
+        await loadUserTasks(user.id);
+      } else {
+        setTasks([]);
+      }
+    });
+    
     // Check for stored Google authentication
     if (googleAuth.loadStoredTokens()) {
       console.log('Google authentication restored from storage');
@@ -99,12 +111,36 @@ const App: React.FC = () => {
       setTheme('dark');
       document.documentElement.setAttribute('data-theme', 'dark');
     }
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
+
+  const loadUserTasks = async (userId: string) => {
+    if (!db.isAvailable()) return;
+    
+    setTasksLoading(true);
+    try {
+      const userTasks = await db.getTasks(userId);
+      setTasks(userTasks);
+      if (userTasks.length > 0) {
+        await optimizeSchedule(userTasks);
+      }
+    } catch (error) {
+      console.error('Failed to load tasks:', error);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
 
   const checkAuth = async () => {
     try {
       const currentUser = await auth.getCurrentUser();
       setUser(currentUser);
+      if (currentUser) {
+        await loadUserTasks(currentUser.id);
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
       setUser(null);
@@ -118,32 +154,101 @@ const App: React.FC = () => {
   };
 
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: Date.now().toString(),
-      userId: user?.id || 'demo-user',
-      state: 'To Do',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    if (!user) {
+      console.error('No authenticated user');
+      return;
+    }
 
-    const updatedTasks = [...tasks, newTask];
-    setTasks(updatedTasks);
-    await optimizeSchedule(updatedTasks);
+    try {
+      // Convert Task data to database format
+      const dbTaskData = {
+        name: taskData.name,
+        description: taskData.description || '',
+        priority: taskData.priority,
+        estimated_minutes: taskData.estimatedMinutes,
+        deadline: taskData.deadline?.toISOString(),
+        task_type: taskData.type,
+        is_flexible: taskData.isFlexible,
+        chunkable: taskData.chunkable,
+        min_chunk_minutes: taskData.minChunkMinutes,
+        max_chunk_minutes: taskData.maxChunkMinutes,
+        dependencies: taskData.dependencies || [],
+        project_id: taskData.projectId,
+        workspace_id: undefined
+      };
+
+      let newTask: Task;
+      
+      if (db.isAvailable()) {
+        // Save to database
+        newTask = await db.createTask(user.id, dbTaskData);
+      } else {
+        // Fallback to local state
+        newTask = {
+          ...taskData,
+          id: Date.now().toString(),
+          userId: user.id,
+          state: 'To Do',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+      }
+
+      const updatedTasks = [...tasks, newTask];
+      setTasks(updatedTasks);
+      await optimizeSchedule(updatedTasks);
+    } catch (error) {
+      console.error('Failed to add task:', error);
+    }
   };
 
   const handleUpdateTask = async (updatedTask: Task) => {
-    const updatedTasks = tasks.map(task => 
-      task.id === updatedTask.id ? { ...updatedTask, updatedAt: new Date() } : task
-    );
-    setTasks(updatedTasks);
-    await optimizeSchedule(updatedTasks);
+    try {
+      if (db.isAvailable()) {
+        // Update in database
+        const dbUpdates = {
+          name: updatedTask.name,
+          description: updatedTask.description || '',
+          priority: updatedTask.priority,
+          estimated_minutes: updatedTask.estimatedMinutes,
+          actual_minutes: updatedTask.actualMinutes,
+          deadline: updatedTask.deadline?.toISOString(),
+          scheduled_time: updatedTask.scheduledTime?.toISOString(),
+          end_time: updatedTask.endTime?.toISOString(),
+          state: updatedTask.state,
+          task_type: updatedTask.type,
+          is_flexible: updatedTask.isFlexible,
+          chunkable: updatedTask.chunkable,
+          dependencies: updatedTask.dependencies,
+          happiness_contribution: updatedTask.happinessContribution,
+          completed_at: updatedTask.completedAt?.toISOString()
+        };
+        
+        await db.updateTask(updatedTask.id, dbUpdates);
+      }
+
+      const updatedTasks = tasks.map(task => 
+        task.id === updatedTask.id ? { ...updatedTask, updatedAt: new Date() } : task
+      );
+      setTasks(updatedTasks);
+      await optimizeSchedule(updatedTasks);
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    const updatedTasks = tasks.filter(task => task.id !== taskId);
-    setTasks(updatedTasks);
-    await optimizeSchedule(updatedTasks);
+    try {
+      if (db.isAvailable()) {
+        await db.deleteTask(taskId);
+      }
+
+      const updatedTasks = tasks.filter(task => task.id !== taskId);
+      setTasks(updatedTasks);
+      await optimizeSchedule(updatedTasks);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
   };
 
   const optimizeSchedule = async (taskList: Task[]) => {
@@ -456,11 +561,20 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'tasks' && (
-          <TaskList
-            tasks={tasks}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleDeleteTask}
-          />
+          <div className="space-y-6 fade-in">
+            {tasksLoading ? (
+              <div className="card p-8 text-center">
+                <div className="loading-spinner mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400">Loading your tasks...</p>
+              </div>
+            ) : (
+              <TaskList
+                tasks={tasks}
+                onUpdateTask={handleUpdateTask}
+                onDeleteTask={handleDeleteTask}
+              />
+            )}
+          </div>
         )}
 
         {currentView === 'workspaces' && (
