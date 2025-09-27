@@ -137,6 +137,13 @@ const App: React.FC = () => {
 
   const checkAuth = async () => {
     try {
+      // Check if Supabase is available first
+      if (!isSupabaseAvailable()) {
+        console.warn('Supabase not configured - running in demo mode');
+        setInitialAuthError('Database not configured. Please set up Supabase to enable authentication and data persistence.');
+        return;
+      }
+
       const currentUser = await auth.getCurrentUser();
       setUser(currentUser);
       if (currentUser) {
@@ -144,8 +151,14 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      const errorMessage = error.message || 'Authentication failed';
+      
+      if (errorMessage.includes('timeout')) {
+        setInitialAuthError('Unable to connect to authentication service. Please check your internet connection and Supabase configuration.');
+      } else {
+        setInitialAuthError(errorMessage);
+      }
       setUser(null);
-      setInitialAuthError(error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

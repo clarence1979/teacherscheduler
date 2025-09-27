@@ -66,13 +66,14 @@ export class AuthService {
   async getCurrentUser(): Promise<User | null> {
     try {
       if (!this.isAvailable()) {
+        console.info('Supabase not available - user authentication disabled');
         return null;
       }
 
       const { data: { user }, error } = await Promise.race([
-        supabase.auth.getUser(),
+        supabase!.auth.getUser(),
         new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Authentication service timeout - please check your network connection or Supabase configuration')), 5000)
+          setTimeout(() => reject(new Error('Authentication service timeout - please check your network connection or Supabase configuration')), 3000)
         )
       ]) as any;
       
@@ -108,7 +109,11 @@ export class AuthService {
         };
       }
     } catch (error) {
-      console.error('getCurrentUser error:', error);
+      if (error.message?.includes('timeout')) {
+        console.error('Supabase connection timeout - check your configuration:', error);
+      } else {
+        console.error('getCurrentUser error:', error);
+      }
       return null;
     }
   }
@@ -118,12 +123,13 @@ export class AuthService {
   onAuthStateChange(callback: (user: User | null) => void) {
     try {
       if (!this.isAvailable()) {
+        console.info('Supabase not available - auth state changes disabled');
         // Return a dummy subscription that immediately calls callback with null
         setTimeout(() => callback(null), 0);
         return { data: { subscription: { unsubscribe: () => {} } } };
       }
 
-      return supabase.auth.onAuthStateChange(async (event, session) => {
+      return supabase!.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
           try {
             const profile = await db.getProfile(session.user.id);

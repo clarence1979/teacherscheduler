@@ -68,7 +68,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
 
     // Check if Supabase is available
     if (!isSupabaseAvailable()) {
-      setError('Database connection not available. Please configure your Supabase URL and API key in the .env file, then restart the development server.');
+      setError('Database connection not available. Please configure your Supabase URL and API key in the .env file, then restart the development server. Check the README.md for setup instructions.');
       setLoading(false);
       return;
     }
@@ -76,14 +76,21 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
     try {
       if (isSignUp) {
         await auth.signUp(formData.email, formData.password, formData.fullName);
-        setError('Account created successfully! You can now sign in.');
+        setError('✅ Account created successfully! You can now sign in.');
         setIsSignUp(false);
       } else {
         await auth.signIn(formData.email, formData.password);
         onAuthSuccess();
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const errorMessage = err.message || 'An error occurred';
+      if (errorMessage.includes('timeout')) {
+        setError('Connection timeout. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
