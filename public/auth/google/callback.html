@@ -55,6 +55,7 @@
         const code = urlParams.get('code');
         const error = urlParams.get('error');
         const errorDescription = urlParams.get('error_description');
+        const state = urlParams.get('state');
 
         if (error) {
             // Handle OAuth error
@@ -73,7 +74,8 @@
             if (window.opener) {
                 window.opener.postMessage({
                     type: 'GOOGLE_AUTH_SUCCESS',
-                    code: code
+                    code: code,
+                    state: state
                 }, window.location.origin);
             }
         } else {

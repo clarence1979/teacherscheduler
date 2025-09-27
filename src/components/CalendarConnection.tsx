@@ -271,23 +271,19 @@ const CalendarConnectionModal: React.FC<{
                 </ul>
               </div>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-800 mb-2">🎯 Demo Mode Available</h4>
-                <p className="text-sm text-blue-700">
-                  Since OAuth isn't configured, you can use demo mode to test calendar integration features.
-                </p>
-              </div>
-              
-              {!googleAuth.isConfigured() && false && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="font-medium text-yellow-800 mb-2">⚠️ Configuration Required</h4>
-                  <p className="text-sm text-yellow-700">
-                    Google OAuth is not configured. Please contact your administrator to set up:
+              {googleAuth.isConfigured() ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">🔗 Ready to Connect</h4>
+                  <p className="text-sm text-blue-700">
+                    Google OAuth is configured and ready. Click below to authenticate and connect your calendar.
                   </p>
-                  <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                    <li>• VITE_GOOGLE_CLIENT_ID environment variable</li>
-                    <li>• VITE_GOOGLE_CLIENT_SECRET environment variable</li>
-                  </ul>
+                </div>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">🎯 Demo Mode Available</h4>
+                  <p className="text-sm text-blue-700">
+                    Google OAuth credentials are being configured. You can use demo mode to test calendar integration features.
+                  </p>
                 </div>
               )}
               
@@ -386,14 +382,14 @@ const CalendarConnectionModal: React.FC<{
         <div className="modal-footer">
           <button 
             className="btn btn-secondary"
-            onClick={onClose}
+            onClick={googleAuth.isConfigured() ? handleGoogleConnect : handleDemoConnect}
           >
-            Cancel
+            {isConnecting ? 'Connecting...' : googleAuth.isConfigured() ? 'Connect with Google' : 'Connect Demo Mode'}
           </button>
           
           {connectionMethod === 'google' ? (
             <button 
-              className="btn btn-primary"
+            onClick={handleMicrosoftConnect}
               onClick={googleAuth.isConfigured() ? onGoogleConnect : onDemoConnect}
               disabled={isConnecting}
             >
@@ -410,7 +406,7 @@ const CalendarConnectionModal: React.FC<{
           ) : (
             <button 
               className="btn btn-primary"
-              onClick={handleManualSubmit}
+              onClick={handleManualConnect}
               disabled={isConnecting || !credentials.apiKey || !credentials.accessToken}
             >
               {isConnecting ? 'Connecting...' : 'Connect'}
