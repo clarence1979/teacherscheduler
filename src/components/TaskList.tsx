@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, Calendar, Target, Edit2, Trash2, PlayCircle } from 'lucide-react';
+import { Clock, Calendar, Target, Edit2, Trash2, PlayCircle, CheckCircle } from 'lucide-react';
 import { Task } from '../../lib/types';
 
 interface TaskListProps {
@@ -40,7 +40,13 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask }
   };
 
   const handleStatusChange = (task: Task, newState: Task['state']) => {
-    onUpdateTask({ ...task, state: newState });
+    const updatedTask = { 
+      ...task, 
+      state: newState,
+      completedAt: newState === 'Done' ? new Date() : undefined,
+      updatedAt: new Date()
+    };
+    onUpdateTask(updatedTask);
   };
 
   const handleEditTask = (task: Task) => {
@@ -145,7 +151,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, onUpdateTask, onDeleteTask }
                       data-tooltip="Complete Task"
                       title="Complete Task"
                     >
-                      <Target className="h-4 w-4" />
+                      <CheckCircle className="h-4 w-4" />
                     </button>
                   )}
 
