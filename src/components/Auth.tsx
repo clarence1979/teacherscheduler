@@ -4,7 +4,6 @@ import { auth } from '../../lib/auth';
 import { isSupabaseAvailable } from '../../lib/supabase';
 import { googleAuth } from '../../lib/google-auth';
 import { microsoftAuth } from '../../lib/microsoft-auth';
-import { mobileDetection } from '../utils/mobile-detection';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -17,7 +16,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [microsoftLoading, setMicrosoftLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile] = useState(mobileDetection.isMobile());
   const [isDark, setIsDark] = useState(() => {
     // Check localStorage first, then system preference
     const saved = localStorage.getItem('theme');
@@ -150,9 +148,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center transition-colors ${isMobile ? 'p-2' : 'p-4'}`}>
-      <div className={`w-full ${isMobile ? 'max-w-sm' : 'max-w-md'}`}>
-        <div className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 transition-colors ${isMobile ? 'p-6' : 'p-8'}`}>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4 transition-colors">
+      <div className="w-full max-w-md">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8 transition-colors">
           <div className="auth-header">
             <div className="flex justify-end mb-4">
               <button
@@ -165,10 +163,10 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             </div>
             <div className="auth-logo">
               <div className="text-4xl mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🧠</div>
-              <h1 className={`font-bold text-gray-900 dark:text-white mb-2 ${isMobile ? 'text-xl' : 'text-2xl'}`}>Teacher Scheduler AI</h1>
-              {!isMobile && <p className="text-sm text-gray-600 dark:text-gray-300">Intelligent Teaching Assistant</p>}
+              <h1 className="text-2xl font-bold text-white dark:text-white mb-2">Teacher Scheduler AI</h1>
+              <p className="text-sm text-gray-200 dark:text-gray-300">Intelligent Teaching Assistant</p>
             </div>
-            <p className={`font-medium text-gray-700 dark:text-gray-200 mt-6 mb-8 text-center ${isMobile ? 'text-base' : 'text-lg'}`}>
+            <p className="text-lg font-medium text-gray-700 dark:text-gray-200 mt-6 mb-8 text-center">
               {isSignUp ? 'Create your account' : 'Welcome back, Teacher'}
             </p>
           </div>
@@ -185,7 +183,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   value={formData.fullName}
                   onChange={(e) => handleInputChange('fullName', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Enter your full name"
                   required={isSignUp}
                 />
@@ -202,7 +199,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                style={{ fontSize: isMobile ? '16px' : '14px' }}
                 placeholder="Enter your email"
                 required
               />
@@ -219,15 +215,13 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="w-full px-4 py-3 pr-12 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-700 dark:text-white transition-colors"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Enter your password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1"
-                  style={{ minWidth: isMobile ? '44px' : 'auto', minHeight: isMobile ? '44px' : 'auto' }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

@@ -1,67 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, Calendar, CheckCircle, BarChart3, Users, Settings as SettingsIcon, LogOut, Sun, Moon } from 'lucide-react';
-import Auth from './components/Auth';
+import { Sun, Moon, Menu, X, Bell, Settings as SettingsIcon, User, ChevronDown } from 'lucide-react';
+import { auth } from '../lib/auth';
+import { isSupabaseAvailable } from '../lib/supabase';
+import { googleAuth } from '../lib/google-auth';
+import { microsoftAuth } from '../lib/microsoft-auth';
+import { HappinessAlgorithm } from '../lib/happiness-algorithm';
+import { RealTimeOptimizer } from '../lib/real-time-optimizer';
+import { CalendarIntegration } from '../lib/calendar-integration';
+import { WorkspaceManager } from '../lib/workspace-manager';
+import { MeetingScheduler } from '../lib/meeting-scheduler';
+import { AnalyticsManager } from '../lib/analytics-manager';
+import { AIEmployeeManager } from '../lib/ai-employee-manager';
 import TaskForm from './components/TaskForm';
-import TaskList from './components/TaskList';
 import ScheduleView from './components/ScheduleView';
+import TaskList from './components/TaskList';
+import RealTimeScheduleView from './components/RealTimeScheduleView';
+import WorkspaceManagerComponent from './components/WorkspaceManager';
+import MeetingSchedulerComponent from './components/MeetingScheduler';
 import Analytics from './components/Analytics';
 import AIEmployees from './components/AIEmployees';
-import MeetingScheduler from './components/MeetingScheduler';
-import WorkspaceManager from './components/WorkspaceManager';
-import CalendarConnection from './components/CalendarConnection';
 import Settings from './components/Settings';
-import { HappinessAlgorithm } from './lib/happiness-algorithm';
-import { AIEmployeeManager } from './lib/ai-employee-manager';
-import { AnalyticsManager } from './lib/analytics-manager';
-import { WorkspaceManager as WorkspaceManagerClass } from './lib/workspace-manager';
-import { CalendarIntegration } from '../lib/calendar-integration';
-import { RealTimeOptimizer } from '../lib/real-time-optimizer';
-import { auth } from './lib/auth';
-import { isSupabaseAvailable } from './lib/supabase';
-import { googleAuth } from './lib/google-auth';
-import { microsoftAuth } from './lib/microsoft-auth';
-import { mobileDetection } from './utils/mobile-detection';
-import { Task, OptimizationResult, UserSchedule } from '../lib/types';
+import CalendarConnection from './components/CalendarConnection';
+import Auth from './components/Auth';
+import { Task, Event, UserSchedule, OptimizationResult } from '../lib/types';
+import { User as AuthUser } from '../lib/auth';
 
-function App() {
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<any>(null);
+const App: React.FC = () => {
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // UI state
-  const [activeTab, setActiveTab] = useState('schedule');
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved) return saved === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-  const [isMobile] = useState(mobileDetection.isMobile());
-
-  // Core system state
+  const [currentView, setCurrentView] = useState<'schedule' | 'tasks' | 'workspaces' | 'meetings' | 'analytics' | 'ai-employees'>('schedule');
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult>({
-    schedule: [],
-    happinessScore: 0.8,
-    confidence: 0.9,
-    unscheduledTasks: [],
-    recommendations: [],
-    warnings: []
-  });
+  const [events, setEvents] = useState<Event[]>([]);
+  const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showMobileNav, setShowMobileNav] = useState(false);
 
-  // System managers
-  const [happinessAlgorithm] = useState(() => new HappinessAlgorithm());
-  const [aiManager] = useState(() => new AIEmployeeManager());
-  const [analyticsManager] = useState(() => new AnalyticsManager());
-  const [workspaceManager] = useState(() => new WorkspaceManagerClass());
-  const [calendarIntegration] = useState(() => new CalendarIntegration());
-  const [realTimeOptimizer] = useState(() => new RealTimeOptimizer(happinessAlgorithm));
-
-  // Calendar state
-  const [isCalendarConnected, setIsCalendarConnected] = useState(false);
-  const [connectedProvider, setConnectedProvider] = useState<string | undefined>();
-
-  // User schedule configuration
+  // Initialize managers
   const [userSchedule] = useState<UserSchedule>({
     workingHours: {
       monday: [9, 17],
@@ -71,8 +48,7 @@ function App() {
       friday: [9, 17]
     },
     breakTimes: [
-      { start: '12:00', end: '13:00', name: 'Lunch Break' },
-      { start: '15:00', end: '15:15', name: 'Afternoon Break' }
+      { start: '12:00', end: '13:00', name: 'Lunch Break' }
     ],
     preferences: {
       focusTimeBlocks: 120,
@@ -86,110 +62,65 @@ function App() {
     }
   });
 
-  // Apply theme
+  const [happinessAlgorithm] = useState(() => new HappinessAlgorithm(userSchedule));
+  const [realTimeOptimizer] = useState(() => new RealTimeOptimizer(happinessAlgorithm));
+  const [calendarIntegration] = useState(() => new CalendarIntegration());
+  const [workspaceManager] = useState(() => new WorkspaceManager());
+  const [meetingScheduler] = useState(() => new MeetingScheduler(userSchedule));
+  const [analyticsManager] = useState(() => new AnalyticsManager());
+  const [aiEmployeeManager] = useState(() => new AIEmployeeManager());
+
   useEffect(() => {
-    const html = document.documentElement;
-    if (isDark) {
-      html.classList.add('dark');
-      html.classList.remove('light');
-    } else {
-      html.classList.add('light');
-      html.classList.remove('dark');
-    }
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
-  // Check authentication on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check for stored demo user
-        const demoUser = localStorage.getItem('demo_user');
-        if (demoUser) {
-          const userData = JSON.parse(demoUser);
-          if (userData.loggedIn) {
-            setUser(userData);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Check Google auth
-        if (googleAuth.loadStoredTokens && googleAuth.loadStoredTokens()) {
-          const googleUser = googleAuth.getCurrentUser();
-          if (googleUser) {
-            setUser(googleUser);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Check Microsoft auth
-        if (microsoftAuth.loadStoredTokens && microsoftAuth.loadStoredTokens()) {
-          const microsoftUser = microsoftAuth.getCurrentUser();
-          if (microsoftUser) {
-            setUser(microsoftUser);
-            setIsAuthenticated(true);
-            setLoading(false);
-            return;
-          }
-        }
-
-        // Check Supabase auth if available
-        if (isSupabaseAvailable()) {
-          const currentUser = await auth.getCurrentUser();
-          if (currentUser) {
-            setUser(currentUser);
-            setIsAuthenticated(true);
-          }
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     checkAuth();
+    
+    // Check for stored Google authentication
+    if (googleAuth.loadStoredTokens()) {
+      console.log('Google authentication restored from storage');
+    }
+    
+    // Check for stored Microsoft authentication
+    if (microsoftAuth.loadStoredTokens()) {
+      console.log('Microsoft authentication restored from storage');
+    }
+    
+    // Load API key from localStorage
+    const savedApiKey = localStorage.getItem('openai_api_key');
+    if (savedApiKey) {
+      setOpenaiApiKey(savedApiKey);
+      aiEmployeeManager.setApiKey(savedApiKey);
+    }
+    
+    // Load theme preference
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      setTheme('dark');
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
   }, []);
 
-  // Set up real-time optimization
-  useEffect(() => {
-    if (isAuthenticated) {
-      realTimeOptimizer.onScheduleChange((newSchedule) => {
-        setOptimizationResult(newSchedule);
-      });
-
-      return () => {
-        realTimeOptimizer.offScheduleChange(() => {});
-      };
+  const checkAuth = async () => {
+    try {
+      const currentUser = await auth.getCurrentUser();
+      setUser(currentUser);
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
     }
-  }, [isAuthenticated, realTimeOptimizer]);
-
-  const handleAuthSuccess = () => {
-    setIsAuthenticated(true);
-    setLoading(false);
   };
 
-  const handleSignOut = async () => {
-    try {
-      await auth.signOut();
-      googleAuth.signOut && googleAuth.signOut();
-      microsoftAuth.signOut && microsoftAuth.signOut();
-      localStorage.removeItem('demo_user');
-      setIsAuthenticated(false);
-      setUser(null);
-    } catch (error) {
-      console.error('Sign out failed:', error);
-    }
+  const handleAuthSuccess = () => {
+    checkAuth();
   };
 
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
     const newTask: Task = {
       ...taskData,
-      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: Date.now().toString(),
       userId: user?.id || 'demo-user',
       state: 'To Do',
       createdAt: new Date(),
@@ -198,217 +129,372 @@ function App() {
 
     const updatedTasks = [...tasks, newTask];
     setTasks(updatedTasks);
-
-    // Trigger optimization
-    const result = happinessAlgorithm.optimizeSchedule(updatedTasks, [], new Date(), 7);
-    setOptimizationResult(result);
-
-    // Track analytics
-    analyticsManager.trackActivity({
-      type: 'task_created',
-      task: newTask.name,
-      priority: newTask.priority,
-      estimatedMinutes: newTask.estimatedMinutes
-    });
+    await optimizeSchedule(updatedTasks);
   };
 
   const handleUpdateTask = async (updatedTask: Task) => {
     const updatedTasks = tasks.map(task => 
-      task.id === updatedTask.id ? updatedTask : task
+      task.id === updatedTask.id ? { ...updatedTask, updatedAt: new Date() } : task
     );
     setTasks(updatedTasks);
-
-    // Handle real-time optimization for task state changes
-    if (updatedTask.state === 'Done') {
-      await realTimeOptimizer.handleDisruption('task_completed', updatedTask, 'medium');
-    } else if (updatedTask.state === 'In Progress') {
-      analyticsManager.trackActivity({
-        type: 'task_started',
-        task: updatedTask.name,
-        startTime: new Date()
-      });
-    }
+    await optimizeSchedule(updatedTasks);
   };
 
   const handleDeleteTask = async (taskId: string) => {
     const updatedTasks = tasks.filter(task => task.id !== taskId);
     setTasks(updatedTasks);
+    await optimizeSchedule(updatedTasks);
+  };
 
-    // Re-optimize schedule
-    const result = happinessAlgorithm.optimizeSchedule(updatedTasks, [], new Date(), 7);
-    setOptimizationResult(result);
+  const optimizeSchedule = async (taskList: Task[]) => {
+    setIsOptimizing(true);
+    try {
+      const result = happinessAlgorithm.optimizeSchedule(taskList, events);
+      setOptimizationResult(result);
+    } catch (error) {
+      console.error('Optimization failed:', error);
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const handleTaskComplete = async (taskId: string) => {
+    await realTimeOptimizer.handleDisruption('task_completed', { taskId }, 'medium');
+  };
+
+  const handleTaskReschedule = async (taskId: string) => {
+    await realTimeOptimizer.handleDisruption('task_missed', { taskId }, 'high');
   };
 
   const handleCalendarConnect = async (provider: string, credentials: any) => {
     try {
-      const result = await calendarIntegration.connectCalendar(provider, credentials);
-      if (result.success) {
-        setIsCalendarConnected(true);
-        setConnectedProvider(provider);
-        
-        // Start syncing events
-        await calendarIntegration.syncEvents(provider);
-        
-        return { success: true };
-      } else {
-        return { success: false, error: result.error };
+      // If using Google and we have stored credentials, use those
+      if (provider === 'google') {
+        const storedCreds = googleAuth.getCalendarCredentials();
+        if (storedCreds) {
+          credentials = storedCreds;
+        }
       }
+      
+      // If using Microsoft and we have stored credentials, use those
+      if (provider === 'outlook' || provider === 'microsoft') {
+        const storedCreds = microsoftAuth.getCalendarCredentials();
+        if (storedCreds) {
+          credentials = storedCreds;
+        }
+      }
+      
+      const result = await calendarIntegration.connectCalendar(provider, credentials);
+      return result;
     } catch (error) {
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: error.message };
     }
   };
 
   const handleApiKeyUpdate = (apiKey: string) => {
-    aiManager.setApiKey(apiKey);
+    setOpenaiApiKey(apiKey);
+    aiEmployeeManager.setApiKey(apiKey);
   };
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  const getUserInitials = (name?: string, email?: string) => {
+    if (name) {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase();
+    }
+    return 'U';
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading Teacher Scheduler AI...</p>
+          <div className="mb-8">
+            <div className="text-6xl mb-4 animate-pulse">🧠</div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Teacher Scheduler AI</h1>
+            <p className="text-gray-600 dark:text-gray-300">Loading your intelligent scheduler...</p>
+          </div>
+          <div className="flex justify-center">
+            <div className="loading-spinner" />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return <Auth onAuthSuccess={handleAuthSuccess} />;
   }
-
-  const tabs = [
-    { id: 'schedule', label: 'Schedule', icon: Calendar },
-    { id: 'tasks', label: 'Tasks', icon: CheckCircle },
-    { id: 'ai-employees', label: 'AI Team', icon: Brain },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'meetings', label: 'Meetings', icon: Users }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">🧠</div>
+      <header className="app-header sticky top-0 z-50">
+        <div className="header-content">
+          <div className="brand-section">
+            <a href="#" className="brand-logo">
+              <div className="brand-icon">🧠</div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Teacher Scheduler AI</h1>
-                {!isMobile && (
-                  <p className="text-xs text-gray-600 dark:text-gray-400">Intelligent Teaching Assistant</p>
-                )}
+                <div className="brand-text">Teacher Scheduler AI</div>
+                <div className="brand-subtitle">Intelligent Teaching Assistant</div>
               </div>
-            </div>
+            </a>
+            
+            <nav className="main-navigation hidden lg:flex">
+              <button
+                onClick={() => setCurrentView('schedule')}
+                className={`nav-button ${currentView === 'schedule' ? 'active' : ''}`}
+              >
+                📅 Schedule
+              </button>
+              <button
+                onClick={() => setCurrentView('tasks')}
+                className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+              >
+                ✅ Tasks
+              </button>
+              <button
+                onClick={() => setCurrentView('workspaces')}
+                className={`nav-button ${currentView === 'workspaces' ? 'active' : ''}`}
+              >
+                📁 Workspaces
+              </button>
+              <button
+                onClick={() => setCurrentView('meetings')}
+                className={`nav-button ${currentView === 'meetings' ? 'active' : ''}`}
+              >
+                🤝 Meetings
+              </button>
+              <button
+                onClick={() => setCurrentView('analytics')}
+                className={`nav-button ${currentView === 'analytics' ? 'active' : ''}`}
+              >
+                📊 Analytics
+              </button>
+              <button
+                onClick={() => setCurrentView('ai-employees')}
+                className={`nav-button ${currentView === 'ai-employees' ? 'active' : ''}`}
+              >
+                🤖 AI Employees
+              </button>
+            </nav>
+          </div>
 
-            <div className="flex items-center gap-2">
-              <CalendarConnection
-                onConnect={handleCalendarConnect}
-                isConnected={isCalendarConnected}
-                connectedProvider={connectedProvider}
-              />
-              
+          <div className="user-section">
+            <CalendarConnection
+              onConnect={handleCalendarConnect}
+              isConnected={false}
+            />
+            
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle tooltip"
+              data-tooltip={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            </button>
+            
+            <div className="flex items-center">
               <Settings
                 onApiKeyUpdate={handleApiKeyUpdate}
-                currentApiKey={localStorage.getItem('openai_api_key') || undefined}
+                currentApiKey={openaiApiKey}
               />
-
-              <button
-                onClick={toggleTheme}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
-              >
-                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-
-              <button
-                onClick={handleSignOut}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
             </div>
+            
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="user-menu"
+                aria-expanded={showUserMenu}
+                aria-haspopup="true"
+              >
+                <div className="user-avatar">
+                  {getUserInitials(user.fullName, user.email)}
+                </div>
+                <div className="user-info hidden sm:block">
+                  <div className="user-name">{user.fullName || user.email}</div>
+                  <div className="user-role">Teacher</div>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              
+              {showUserMenu && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
+                  <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700">
+                    <div className="font-medium text-gray-900 dark:text-white">{user.fullName || 'User'}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Add profile settings logic here
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Profile Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      auth.signOut();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Mobile Navigation Toggle */}
+            <button
+              onClick={() => setShowMobileNav(!showMobileNav)}
+              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              aria-label="Toggle mobile navigation"
+            >
+              {showMobileNav ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
+        
+        {/* Mobile Navigation */}
+        {showMobileNav && (
+          <div className="lg:hidden border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <nav className="px-4 py-2 space-y-1">
+              <button
+                onClick={() => setCurrentView('schedule')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'schedule' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                📅 Schedule
+              </button>
+              <button
+                onClick={() => setCurrentView('tasks')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'tasks' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                ✅ Tasks
+              </button>
+              <button
+                onClick={() => setCurrentView('workspaces')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'workspaces' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                📁 Workspaces
+              </button>
+              <button
+                onClick={() => setCurrentView('meetings')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'meetings' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                🤝 Meetings
+              </button>
+              <button
+                onClick={() => setCurrentView('analytics')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'analytics' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                📊 Analytics
+              </button>
+              <button
+                onClick={() => setCurrentView('ai-employees')}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'ai-employees' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                🤖 AI Employees
+              </button>
+            </nav>
+          </div>
+        )}
       </header>
-
-      {/* Navigation */}
-      <nav className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8 overflow-x-auto">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {!isMobile && tab.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </nav>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'schedule' && (
-          <div className="space-y-6">
+        {currentView === 'schedule' && (
+          <div className="space-y-6 fade-in">
             <TaskForm onAddTask={handleAddTask} />
-            <ScheduleView optimizationResult={optimizationResult} />
+            {optimizationResult ? (
+              <RealTimeScheduleView
+                optimizationResult={optimizationResult}
+                events={events}
+                onTaskComplete={handleTaskComplete}
+                onTaskReschedule={handleTaskReschedule}
+                isOptimizing={isOptimizing}
+              />
+            ) : (
+              <ScheduleView optimizationResult={{ schedule: [], happinessScore: 0, confidence: 0, unscheduledTasks: [], recommendations: [], warnings: [] }} />
+            )}
           </div>
         )}
 
-        {activeTab === 'tasks' && (
-          <div className="space-y-6">
-            <WorkspaceManager
-              workspaceManager={workspaceManager}
-              onWorkspaceChange={(workspaceId) => console.log('Workspace changed:', workspaceId)}
-              onTasksUpdate={setTasks}
-            />
-            <TaskList
-              tasks={tasks}
-              onUpdateTask={handleUpdateTask}
-              onDeleteTask={handleDeleteTask}
-            />
-          </div>
+        {currentView === 'tasks' && (
+          <TaskList
+            tasks={tasks}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+          />
         )}
 
-        {activeTab === 'ai-employees' && (
-          <AIEmployees aiManager={aiManager} />
+        {currentView === 'workspaces' && (
+          <WorkspaceManagerComponent
+            workspaceManager={workspaceManager}
+            onWorkspaceChange={(workspaceId) => console.log('Workspace changed:', workspaceId)}
+            onTasksUpdate={setTasks}
+          />
         )}
 
-        {activeTab === 'analytics' && (
+        {currentView === 'meetings' && (
+          <MeetingSchedulerComponent
+            userSchedule={userSchedule}
+            onMeetingBooked={(meeting) => console.log('Meeting booked:', meeting)}
+          />
+        )}
+
+        {currentView === 'analytics' && (
           <Analytics
             analyticsManager={analyticsManager}
             tasks={tasks}
             projects={[]}
             workspaces={[]}
-            events={[]}
+            events={events}
           />
         )}
 
-        {activeTab === 'meetings' && (
-          <MeetingScheduler
-            userSchedule={userSchedule}
-            onMeetingBooked={(meeting) => console.log('Meeting booked:', meeting)}
-          />
+        {currentView === 'ai-employees' && (
+          <AIEmployees aiManager={aiEmployeeManager} />
         )}
       </main>
     </div>
   );
-}
+};
 
-export default App;
+
+export default App
