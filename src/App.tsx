@@ -489,7 +489,10 @@ const App: React.FC = () => {
         )}
 
         {currentView === 'ai-employees' && (
-          <AIEmployees aiManager={aiEmployeeManager} />
+          <AIEmployees 
+            aiManager={aiEmployeeManager} 
+            onTaskCreated={handleAddTask}
+          />
         )}
       </main>
     </div>

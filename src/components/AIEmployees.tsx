@@ -4,6 +4,7 @@ import { AIEmployeeManager } from '../../lib/ai-employee-manager';
 
 interface AIEmployeesProps {
   aiManager: AIEmployeeManager;
+  onTaskCreated?: (taskData: any) => void;
 }
 
 const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager, onTaskCreated }) => {
@@ -372,6 +373,9 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager, onTaskCreated }) =
           onClose={() => setReviewingWorkflow(null)}
           onApprove={() => {
             handleApproveWorkflow(reviewingWorkflow.id);
+            if (onTaskCreated) {
+              convertWorkflowToTask(reviewingWorkflow);
+            }
             setReviewingWorkflow(null);
           }}
           onReject={() => handleRejectWorkflow(reviewingWorkflow.id)}
