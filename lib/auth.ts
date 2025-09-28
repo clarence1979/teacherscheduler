@@ -74,7 +74,7 @@ export class AuthService {
       
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Supabase auth timeout')), 5000);
+        setTimeout(() => reject(new Error('Supabase auth timeout')), 10000);
       });
       
       // Get the user
