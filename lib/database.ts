@@ -209,7 +209,7 @@ export class DatabaseService {
       // Add timeout wrapper to prevent hanging
       const queryPromise = query.order('created_at', { ascending: false });
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30000)
+        setTimeout(() => reject(new Error('Query timeout after 60 seconds')), 60000)
       );
       
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
