@@ -204,8 +204,15 @@ export class DatabaseService {
         query = query.eq('state', filters.state);
       }
 
-      console.log('Executing Supabase query...');
-      const { data, error } = await query.order('created_at', { ascending: false });
+      console.log('Executing Supabase query with 10 second timeout...');
+      
+      // Add timeout wrapper to prevent hanging
+      const queryPromise = query.order('created_at', { ascending: false });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+      );
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Supabase query error:', error);
@@ -216,7 +223,9 @@ export class DatabaseService {
       return data ? data.map(this.mapTaskFromDB) : [];
     } catch (error) {
       console.error('Database getTasks error:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent app crash
+      console.log('Falling back to empty tasks array');
+      return [];
     }
   }
 
