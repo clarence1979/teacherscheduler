@@ -207,9 +207,13 @@ export class DatabaseService {
       console.log('Executing Supabase query with 10 second timeout...');
       
       // Add timeout wrapper to prevent hanging
-      const queryPromise = query.order('created_at', { ascending: false });
+      const queryPromise = query
+        .order('created_at', { ascending: false })
+        .limit(100); // Limit results to prevent large data transfers
+      
+      // Use a shorter timeout and simpler query
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 120 seconds')), 120000)
+        setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
       );
       
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
