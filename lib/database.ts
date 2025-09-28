@@ -180,16 +180,43 @@ export class DatabaseService {
     workspaceId?: string;
     state?: string;
   }): Promise<Task[]> {
+    if (!this.isAvailable()) {
+      console.log('Database not available, returning empty tasks');
+      return [];
+    }
+
     try {
       console.log('Database getTasks called for user:', userId);
-      // For now, return empty array to prevent hanging
-      // Database queries will be re-enabled once Supabase is properly configured
-      console.log('Skipping database query to prevent timeout');
-      return [];
+      console.log('Building Supabase query...');
+      
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (filters?.projectId) {
+        query = query.eq('project_id', filters.projectId);
+      }
+      if (filters?.workspaceId) {
+        query = query.eq('workspace_id', filters.workspaceId);
+      }
+      if (filters?.state) {
+        query = query.eq('state', filters.state);
+      }
+
+      console.log('Executing Supabase query...');
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
+
+      console.log('Successfully loaded tasks from database:', data?.length || 0);
+      return data ? data.map(this.mapTaskFromDB) : [];
     } catch (error) {
       console.error('Database getTasks error:', error);
-      // Return empty array instead of throwing to prevent app crash
-      return [];
+      throw error;
     }
   }
 

@@ -123,13 +123,6 @@ const App: React.FC = () => {
     console.log('Loading tasks for user:', userId);
     
     try {
-      // Check if database is actually available and configured
-      if (!isSupabaseAvailable() || !db.isAvailable()) {
-        console.log('Database not available, using empty task list');
-        setTasks([]);
-        return;
-      }
-      
       console.log('Attempting to load tasks from database...');
       const userTasks = await db.getTasks(userId);
       console.log('Successfully loaded tasks:', userTasks.length);
@@ -142,7 +135,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load tasks:', error);
-      // Fall back to empty tasks if loading fails
+      // Fall back to empty tasks if loading fails but don't crash
       setTasks([]);
     } finally {
       console.log('Task loading completed');
@@ -198,7 +191,7 @@ const App: React.FC = () => {
     console.log('Adding task:', taskData);
 
     try {
-      if (isSupabaseAvailable() && db.isAvailable()) {
+      if (db.isAvailable()) {
         console.log('Creating task in database...');
         // Create task in database
         const dbTaskData = {
@@ -247,7 +240,7 @@ const App: React.FC = () => {
 
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
-      if (isSupabaseAvailable() && db.isAvailable()) {
+      if (db.isAvailable()) {
         console.log('Updating task in database:', updatedTask.id);
         const dbUpdates = {
           name: updatedTask.name,
@@ -284,7 +277,7 @@ const App: React.FC = () => {
 
   const handleDeleteTask = async (taskId: string) => {
     try {
-      if (isSupabaseAvailable() && db.isAvailable()) {
+      if (db.isAvailable()) {
         console.log('Deleting task from database:', taskId);
         await db.deleteTask(taskId);
         console.log('Task deleted from database successfully');
