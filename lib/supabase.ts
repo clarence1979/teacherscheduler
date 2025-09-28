@@ -3,35 +3,49 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Create Supabase client if environment variables are present
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
-      },
-      global: {
-        headers: {
-          'X-Client-Info': 'teacher-scheduler-ai'
-        }
+console.log('Supabase environment check:', {
+  url: supabaseUrl ? 'present' : 'missing',
+  key: supabaseAnonKey ? 'present' : 'missing'
+})
+
+// Create Supabase client
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'teacher-scheduler-ai'
       }
-    })
-  : null
+    }
+  }
+)
 
 // Helper function to check if Supabase is available
 export const isSupabaseAvailable = () => {
-  const hasUrl = !!supabaseUrl && supabaseUrl.trim() !== '' && supabaseUrl !== 'your_supabase_url_here'
-  const hasKey = !!supabaseAnonKey && supabaseAnonKey.trim() !== '' && supabaseAnonKey !== 'your_supabase_anon_key_here'
+  const hasValidUrl = supabaseUrl && 
+    supabaseUrl.trim() !== '' && 
+    supabaseUrl !== 'your_supabase_url_here' &&
+    supabaseUrl.includes('supabase.co')
   
-  console.log('Supabase availability check:', {
-    hasUrl,
-    hasKey,
-    url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
+  const hasValidKey = supabaseAnonKey && 
+    supabaseAnonKey.trim() !== '' && 
+    supabaseAnonKey !== 'your_supabase_anon_key_here' &&
+    supabaseAnonKey.startsWith('eyJ')
+  
+  console.log('Supabase availability:', {
+    hasValidUrl,
+    hasValidKey,
+    url: supabaseUrl,
     keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'missing'
   })
   
-  return hasUrl && hasKey && supabase !== null
+  return hasValidUrl && hasValidKey
 }
 
 // Database types

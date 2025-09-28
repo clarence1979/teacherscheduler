@@ -66,19 +66,15 @@ export class AuthService {
   async getCurrentUser(): Promise<User | null> {
     try {
       if (!this.isAvailable()) {
-        console.warn('Supabase not available - user authentication disabled');
+        console.info('Supabase not available - user authentication disabled');
         return null;
       }
 
-      // Get the user with a reasonable timeout
-      const { data: { user }, error } = await supabase!.auth.getUser();
+      // Get the user
+      const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
-        if (error.message === 'Auth session missing!') {
-          console.info('Auth session missing - user not logged in');
-        } else {
-          console.error('Auth error:', error);
-        }
+        console.info('Auth error (expected if not logged in):', error.message);
         return null;
       }
     
@@ -91,21 +87,21 @@ export class AuthService {
         return {
           id: user.id,
           email: user.email!,
-          fullName: profile?.full_name || undefined,
+          fullName: profile?.full_name || user.user_metadata?.full_name || undefined,
           avatarUrl: profile?.avatar_url || undefined
         };
       } catch (profileError) {
-        console.error('Profile fetch error:', profileError);
+        console.info('Profile fetch error (using fallback):', profileError);
         // Return user without profile data if profile fetch fails
         return {
           id: user.id,
           email: user.email!,
-          fullName: undefined,
+          fullName: user.user_metadata?.full_name || undefined,
           avatarUrl: undefined
         };
       }
     } catch (error) {
-      console.error('getCurrentUser error:', error);
+      console.info('getCurrentUser error:', error);
       return null;
     }
   }
@@ -115,28 +111,28 @@ export class AuthService {
   onAuthStateChange(callback: (user: User | null) => void) {
     try {
       if (!this.isAvailable()) {
-        console.info('Supabase not available - auth state changes disabled');
+        console.info('Supabase not available - using fallback auth');
         // Return a dummy subscription that immediately calls callback with null
         setTimeout(() => callback(null), 0);
         return { data: { subscription: { unsubscribe: () => {} } } };
       }
 
-      return supabase!.auth.onAuthStateChange(async (event, session) => {
+      return supabase.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
           try {
             const profile = await db.getProfile(session.user.id);
             callback({
               id: session.user.id,
               email: session.user.email!,
-              fullName: profile?.full_name || undefined,
+              fullName: profile?.full_name || session.user.user_metadata?.full_name || undefined,
               avatarUrl: profile?.avatar_url || undefined
             });
           } catch (error) {
-            console.error('Profile fetch in auth change:', error);
+            console.info('Profile fetch in auth change (using fallback):', error);
             callback({
               id: session.user.id,
               email: session.user.email!,
-              fullName: undefined,
+              fullName: session.user.user_metadata?.full_name || undefined,
               avatarUrl: undefined
             });
           }
@@ -145,7 +141,7 @@ export class AuthService {
         }
       });
     } catch (error) {
-      console.error('Auth state change setup error:', error);
+      console.info('Auth state change setup error:', error);
       // Return a dummy subscription that does nothing
       return { data: { subscription: { unsubscribe: () => {} } } };
     }
