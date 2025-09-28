@@ -70,38 +70,42 @@ export class AuthService {
         return null;
       }
 
-      console.log('Getting current user from Supabase session...');
+      console.log('Checking for stored session...');
       
-      // Use getSession instead of getUser to avoid hanging
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.log('Session error:', error.message);
+      // Check localStorage for existing session first
+      const storedSession = localStorage.getItem('sb-' + this.getProjectRef() + '-auth-token');
+      if (!storedSession) {
+        console.log('No stored session found');
         return null;
       }
-    
-      if (!session?.user) {
-        console.log('No active session found');
-        return null;
-      }
-
-      const user = session.user;
-      console.log('Session found, user ID:', user.id);
-
-      // Return user data without profile fetch to avoid hanging
-      const userData = {
-        id: user.id,
-        email: user.email!,
-        fullName: user.user_metadata?.full_name || undefined,
-        avatarUrl: undefined
-      };
       
-      console.log('User data prepared:', userData);
-      return userData;
+      try {
+        const sessionData = JSON.parse(storedSession);
+        if (sessionData?.user) {
+          console.log('Found stored user session');
+          return {
+            id: sessionData.user.id,
+            email: sessionData.user.email,
+            fullName: sessionData.user.user_metadata?.full_name || undefined,
+            avatarUrl: undefined
+          };
+        }
+      } catch (parseError) {
+        console.log('Failed to parse stored session');
+      }
+      
+      console.log('No valid stored session');
+      return null;
     } catch (error) {
       console.error('getCurrentUser error:', error);
       return null;
     }
+  }
+  
+  private getProjectRef(): string {
+    const url = import.meta.env.VITE_SUPABASE_URL || '';
+    const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+    return match ? match[1] : 'unknown';
   }
     
 

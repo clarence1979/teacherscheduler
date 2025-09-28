@@ -153,8 +153,11 @@ const App: React.FC = () => {
       console.log('Auth check result:', currentUser);
       setUser(currentUser);
       
-      // Don't load tasks during initial auth check to avoid hanging
-      // Tasks will be loaded after auth state is established
+      // If user is found, load their tasks
+      if (currentUser) {
+        console.log('User authenticated, loading tasks...');
+        await loadUserTasks(currentUser.id);
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
       const errorMessage = (error as Error).message || 'Authentication failed';
