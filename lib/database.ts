@@ -180,7 +180,8 @@ export class DatabaseService {
     workspaceId?: string;
     state?: string;
   }): Promise<Task[]> {
-    console.log('Database getTasks called for user:', userId);
+    try {
+      console.log('Database getTasks called for user:', userId);
       // For now, return empty array to prevent hanging
       // Database queries will be re-enabled once Supabase is properly configured
       console.log('Skipping database query to prevent timeout');
