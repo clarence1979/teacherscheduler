@@ -19,9 +19,15 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    console.log('TaskForm: Starting task submission...');
     
     const task: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'> = {
       name: formData.name,
@@ -39,26 +45,28 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
     };
 
     try {
-      onAddTask(task);
-      console.log('Task submitted successfully:', task);
+      console.log('TaskForm: Calling onAddTask with:', task);
+      await onAddTask(task);
+      console.log('TaskForm: Task submitted successfully');
+      
+      // Reset form only after successful submission
+      setFormData({
+        name: '',
+        description: '',
+        estimatedMinutes: 60,
+        priority: 'Medium',
+        deadline: '',
+        type: 'general',
+        isFlexible: true,
+        chunkable: true
+      });
+      setIsExpanded(false);
     } catch (error) {
-      console.error('Error submitting task:', error);
-      alert('Failed to add task. Please try again.');
-      return;
+      console.error('TaskForm: Error submitting task:', error);
+      alert(`Failed to add task: ${(error as Error).message || 'Unknown error'}. Please try again.`);
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      estimatedMinutes: 60,
-      priority: 'Medium',
-      deadline: '',
-      type: 'general',
-      isFlexible: true,
-      chunkable: true
-    });
-    setIsExpanded(false);
   };
 
   const priorityColors = {
@@ -229,10 +237,20 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
+            disabled={isSubmitting || !formData.name.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-md transition-colors flex items-center justify-center gap-2"
           >
-            <Plus className="h-5 w-5" />
-            Add Task & Optimize Schedule
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Adding Task...
+              </>
+            ) : (
+              <>
+                <Plus className="h-5 w-5" />
+                Add Task & Optimize Schedule
+              </>
+            )}
           </button>
         </div>
       </form>

@@ -185,8 +185,7 @@ const App: React.FC = () => {
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
     if (!user) {
       console.error('No authenticated user');
-      alert('Please sign in to add tasks');
-      return;
+      throw new Error('Please sign in to add tasks');
     }
 
     console.log('Adding task:', taskData);
@@ -239,8 +238,8 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to add task:', error);
-      // Show user-friendly error message
-      alert(`Failed to save task: ${(error as Error).message || 'Unknown error'}. Please try again.`);
+      // Re-throw the error so the form can handle it
+      throw new Error(`Failed to save task: ${(error as Error).message || 'Unknown error'}`);
     }
   };
 
