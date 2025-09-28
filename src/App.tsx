@@ -185,6 +185,7 @@ const App: React.FC = () => {
   const handleAddTask = async (taskData: Omit<Task, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'state'>) => {
     if (!user) {
       console.error('No authenticated user');
+      alert('Please sign in to add tasks');
       return;
     }
 
@@ -210,6 +211,7 @@ const App: React.FC = () => {
           workspace_id: undefined
         };
         
+        console.log('Database task data:', dbTaskData);
         const newTask = await db.createTask(user.id, dbTaskData);
         console.log('Task created in database:', newTask);
         
@@ -217,6 +219,7 @@ const App: React.FC = () => {
         setTasks(updatedTasks);
         console.log('Updated tasks list, optimizing schedule...');
         await optimizeSchedule(updatedTasks);
+        console.log('Task added and schedule optimized successfully');
       } else {
         console.log('Database not available, creating task locally only');
         // Fallback to local state if database not available
@@ -232,11 +235,12 @@ const App: React.FC = () => {
         const updatedTasks = [...tasks, newTask];
         setTasks(updatedTasks);
         await optimizeSchedule(updatedTasks);
+        console.log('Task added locally and schedule optimized');
       }
     } catch (error) {
       console.error('Failed to add task:', error);
       // Show user-friendly error message
-      alert(`Failed to save task: ${error.message}. Please try again.`);
+      alert(`Failed to save task: ${(error as Error).message || 'Unknown error'}. Please try again.`);
     }
   };
 

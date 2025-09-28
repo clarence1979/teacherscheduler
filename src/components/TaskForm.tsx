@@ -38,7 +38,14 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
       projectId: undefined
     };
 
-    onAddTask(task);
+    try {
+      onAddTask(task);
+      console.log('Task submitted successfully:', task);
+    } catch (error) {
+      console.error('Error submitting task:', error);
+      alert('Failed to add task. Please try again.');
+      return;
+    }
     
     // Reset form
     setFormData({
