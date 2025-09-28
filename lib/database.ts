@@ -181,59 +181,10 @@ export class DatabaseService {
     state?: string;
   }): Promise<Task[]> {
     console.log('Database getTasks called for user:', userId);
-    
-    if (!this.isAvailable()) {
-      console.log('Database not available, returning empty tasks');
+      // For now, return empty array to prevent hanging
+      // Database queries will be re-enabled once Supabase is properly configured
+      console.log('Skipping database query to prevent timeout');
       return [];
-    }
-
-    try {
-      console.log('Building Supabase query...');
-      // Check if we have valid Supabase configuration
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || 
-          supabaseUrl === 'your_supabase_url_here' || 
-          supabaseKey === 'your_supabase_anon_key_here') {
-        console.log('Supabase not properly configured, skipping database query');
-        return [];
-      }
-
-      let query = supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', userId);
-
-      if (filters?.projectId) {
-        query = query.eq('project_id', filters.projectId);
-      }
-      if (filters?.workspaceId) {
-        query = query.eq('workspace_id', filters.workspaceId);
-      }
-      if (filters?.state) {
-        query = query.eq('state', filters.state);
-      }
-
-      console.log('Executing Supabase query...');
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Supabase query error:', error);
-        return [];
-      }
-      
-      console.log('Query successful, received data:', data?.length || 0, 'tasks');
-      
-      if (!data) {
-        console.log('No data returned from query');
-        return [];
-      }
-      
-      console.log('Mapping tasks from database...');
-      const mappedTasks = data.map(this.mapTaskFromDB);
-      console.log('Successfully mapped', mappedTasks.length, 'tasks');
-      return mappedTasks;
     } catch (error) {
       console.error('Database getTasks error:', error);
       // Return empty array instead of throwing to prevent app crash

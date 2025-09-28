@@ -122,15 +122,14 @@ const App: React.FC = () => {
     setTasksLoading(true);
     console.log('Loading tasks for user:', userId);
     
-    // Check if database is actually available and configured
-    if (!isSupabaseAvailable() || !db.isAvailable()) {
-      console.log('Database not available, using empty task list');
-      setTasks([]);
-      setTasksLoading(false);
-      return;
-    }
-    
     try {
+      // Check if database is actually available and configured
+      if (!isSupabaseAvailable() || !db.isAvailable()) {
+        console.log('Database not available, using empty task list');
+        setTasks([]);
+        return;
+      }
+      
       console.log('Attempting to load tasks from database...');
       const userTasks = await db.getTasks(userId);
       console.log('Successfully loaded tasks:', userTasks.length);
