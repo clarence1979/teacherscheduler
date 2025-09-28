@@ -661,7 +661,13 @@ const App: React.FC = () => {
         {currentView === 'ai-employees' && (
           <AIEmployees 
             aiManager={aiEmployeeManager} 
-            onTaskCreated={handleAddTask}
+            onTaskCreated={(taskData) => {
+              console.log('AI workflow approved, creating task:', taskData);
+              handleAddTask(taskData).catch(error => {
+                console.error('Failed to create task from AI workflow:', error);
+                alert('Failed to add AI-generated task to your schedule. Please try again.');
+              });
+            }}
           />
         )}
       </main>

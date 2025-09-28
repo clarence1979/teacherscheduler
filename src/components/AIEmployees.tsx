@@ -56,7 +56,7 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager, onTaskCreated }) =
     const workflow = workflows.find(w => w.id === workflowId);
     if (workflow && workflow.result) {
       const taskData = convertWorkflowToTask(workflow);
-      onTaskCreated(taskData);
+      onTaskCreated?.(taskData);
     }
   };
 
@@ -369,10 +369,6 @@ const AIEmployees: React.FC<AIEmployeesProps> = ({ aiManager, onTaskCreated }) =
           onClose={() => setReviewingWorkflow(null)}
           onApprove={() => {
             handleApproveWorkflow(reviewingWorkflow.id);
-            const taskData = convertWorkflowToTask(reviewingWorkflow);
-            if (onTaskCreated) {
-              onTaskCreated(taskData);
-            }
             setReviewingWorkflow(null);
           }}
           onReject={() => handleRejectWorkflow(reviewingWorkflow.id)}
