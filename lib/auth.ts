@@ -66,32 +66,41 @@ export class AuthService {
   async getCurrentUser(): Promise<User | null> {
     try {
       if (!this.isAvailable()) {
-        console.info('Supabase not available - user authentication disabled');
+        console.log('Supabase not available - user authentication disabled');
         return null;
       }
 
+      console.log('Getting current user from Supabase...');
       // Get the user
       const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
-        console.info('Auth error (expected if not logged in):', error.message);
+        console.log('Auth error (expected if not logged in):', error.message);
         return null;
       }
     
-      if (!user) return null;
+      if (!user) {
+        console.log('No authenticated user found');
+        return null;
+      }
+
+      console.log('User found, fetching profile...');
 
       // Get profile data
       try {
         const profile = await db.getProfile(user.id);
         
-        return {
+        const userData = {
           id: user.id,
           email: user.email!,
           fullName: profile?.full_name || user.user_metadata?.full_name || undefined,
           avatarUrl: profile?.avatar_url || undefined
         };
+        
+        console.log('User data prepared:', userData);
+        return userData;
       } catch (profileError) {
-        console.info('Profile fetch error (using fallback):', profileError);
+        console.log('Profile fetch error (using fallback):', profileError);
         // Return user without profile data if profile fetch fails
         return {
           id: user.id,
@@ -101,7 +110,7 @@ export class AuthService {
         };
       }
     } catch (error) {
-      console.info('getCurrentUser error:', error);
+      console.error('getCurrentUser error:', error);
       return null;
     }
   }
