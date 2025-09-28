@@ -205,7 +205,9 @@ const App: React.FC = () => {
           chunkable: taskData.chunkable,
           min_chunk_minutes: taskData.minChunkMinutes || 15,
           max_chunk_minutes: taskData.maxChunkMinutes,
-          dependencies: taskData.dependencies || []
+          dependencies: taskData.dependencies || [],
+          project_id: taskData.projectId,
+          workspace_id: undefined
         };
         
         const newTask = await db.createTask(user.id, dbTaskData);
@@ -234,7 +236,7 @@ const App: React.FC = () => {
     } catch (error) {
       console.error('Failed to add task:', error);
       // Show user-friendly error message
-      alert('Failed to save task. Please try again.');
+      alert(`Failed to save task: ${error.message}. Please try again.`);
     }
   };
 
