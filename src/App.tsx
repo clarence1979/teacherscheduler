@@ -138,6 +138,12 @@ const App: React.FC = () => {
   const checkAuth = async () => {
     try {
       console.log('Starting auth check...');
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Authentication check timeout')), 10000);
+      });
+      
       // Check if Supabase is available first
       if (!isSupabaseAvailable()) {
         console.warn('Supabase not configured - running in demo mode');
@@ -147,7 +153,10 @@ const App: React.FC = () => {
       }
 
       console.log('Supabase is available, checking current user...');
-      const currentUser = await auth.getCurrentUser();
+      const currentUser = await Promise.race([
+        auth.getCurrentUser(),
+        timeoutPromise
+      ]);
       console.log('Auth check result:', currentUser);
       setUser(currentUser);
       if (currentUser) {
@@ -155,14 +164,15 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      const errorMessage = error.message || 'Authentication failed';
+      const errorMessage = (error as Error).message || 'Authentication failed';
       
       if (errorMessage.includes('timeout')) {
-        setInitialAuthError('Unable to connect to authentication service. Please check your internet connection and Supabase configuration.');
+        setInitialAuthError('Authentication check timed out. You can continue without authentication.');
+        setUser(null);
       } else {
         setInitialAuthError(errorMessage);
+        setUser(null);
       }
-      setUser(null);
     } finally {
       console.log('Auth check completed, setting loading to false');
       setLoading(false);
