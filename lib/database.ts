@@ -211,23 +211,32 @@ export class DatabaseService {
         .order('created_at', { ascending: false })
         .limit(100); // Limit results to prevent large data transfers
       
-      // Use a shorter timeout and simpler query
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 5 seconds')), 5000)
+      // Create a timeout signal object instead of rejecting
+      const TIMEOUT_SIGNAL = Symbol('timeout');
+      const timeoutPromise = new Promise((resolve) => 
+        setTimeout(() => resolve(TIMEOUT_SIGNAL), 5000)
       );
       
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+
+      // Check if timeout occurred
+      if (result === TIMEOUT_SIGNAL) {
+        console.warn('Database query timed out after 5 seconds, returning empty array');
+        return [];
+      }
+
+      const { data, error } = result as any;
 
       if (error) {
         console.error('Supabase query error:', error);
-        throw error;
+        console.log('Returning empty array due to query error');
+        return [];
       }
 
       console.log('Successfully loaded tasks from database:', data?.length || 0);
       return data ? data.map(this.mapTaskFromDB) : [];
     } catch (error) {
       console.error('Database getTasks error:', error);
-      // Return empty array instead of throwing to prevent app crash
       console.log('Falling back to empty tasks array');
       return [];
     }
