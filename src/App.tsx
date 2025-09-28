@@ -220,40 +220,30 @@ const App: React.FC = () => {
           console.log('Updated tasks list, optimizing schedule...');
           await optimizeSchedule(updatedTasks);
           console.log('Task added and schedule optimized successfully');
+          return; // Successfully created in database, exit early
         } catch (dbError) {
           console.warn('Database task creation failed, falling back to local storage:', dbError);
-          // Fall back to local task creation if database fails
-          const newTask: Task = {
-            ...taskData,
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-            userId: user.id,
-            state: 'To Do',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-
-          const updatedTasks = [...tasks, newTask];
-          setTasks(updatedTasks);
-          await optimizeSchedule(updatedTasks);
-          console.log('Task added locally and schedule optimized');
+          // Continue to fallback logic below
         }
       } else {
         console.log('Database not available, creating task locally only');
-        // Fallback to local state if database not available
-        const newTask: Task = {
-          ...taskData,
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          userId: user.id,
-          state: 'To Do',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        const updatedTasks = [...tasks, newTask];
-        setTasks(updatedTasks);
-        await optimizeSchedule(updatedTasks);
-        console.log('Task added locally and schedule optimized');
       }
+      
+      // Fallback to local task creation
+      console.log('Creating task locally...');
+      const newTask: Task = {
+        ...taskData,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        userId: user.id,
+        state: 'To Do',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      const updatedTasks = [...tasks, newTask];
+      setTasks(updatedTasks);
+      await optimizeSchedule(updatedTasks);
+      console.log('Task added locally and schedule optimized');
     } catch (error) {
       console.error('Failed to add task:', error);
       // Re-throw the error so the form can handle it
