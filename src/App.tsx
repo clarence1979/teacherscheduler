@@ -130,7 +130,7 @@ const App: React.FC = () => {
     try {
       // Use a timeout to prevent hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Task loading timeout')), 10000)
+        setTimeout(() => reject(new Error('Task loading timeout')), 30000)
       );
       
       const taskPromise = db.getTasks(userId);
