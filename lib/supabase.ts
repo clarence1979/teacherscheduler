@@ -21,9 +21,17 @@ export const supabase = (supabaseUrl && supabaseAnonKey)
 
 // Helper function to check if Supabase is available
 export const isSupabaseAvailable = () => {
-  return supabase !== null && 
-         import.meta.env.VITE_SUPABASE_URL && 
-         import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const hasUrl = !!supabaseUrl && supabaseUrl.trim() !== '' && supabaseUrl !== 'your_supabase_url_here'
+  const hasKey = !!supabaseAnonKey && supabaseAnonKey.trim() !== '' && supabaseAnonKey !== 'your_supabase_anon_key_here'
+  
+  console.log('Supabase availability check:', {
+    hasUrl,
+    hasKey,
+    url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'missing',
+    keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'missing'
+  })
+  
+  return hasUrl && hasKey && supabase !== null
 }
 
 // Database types
