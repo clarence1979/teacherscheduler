@@ -45,6 +45,21 @@ export const isSupabaseAvailable = () => {
     keyPrefix: supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'missing'
   })
   
+  // Clear invalid session data if Supabase is not properly configured
+  if (!hasValidUrl || !hasValidKey) {
+    try {
+      // Clear any stored session data that might be causing refresh token errors
+      const projectRef = supabaseUrl ? supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/)?.[1] : 'unknown';
+      const sessionKey = `sb-${projectRef}-auth-token`;
+      if (localStorage.getItem(sessionKey)) {
+        console.log('Clearing invalid session data for unconfigured Supabase project');
+        localStorage.removeItem(sessionKey);
+      }
+    } catch (error) {
+      console.warn('Failed to clear session data:', error);
+    }
+  }
+  
   return hasValidUrl && hasValidKey
 }
 

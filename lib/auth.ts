@@ -67,6 +67,8 @@ export class AuthService {
     try {
       if (!this.isAvailable()) {
         console.log('Supabase not available - returning null user');
+        // Clear any invalid session data
+        this.clearInvalidSession();
         return null;
       }
 
@@ -92,12 +94,16 @@ export class AuthService {
         }
       } catch (parseError) {
         console.log('Failed to parse stored session');
+        // Clear invalid session data
+        this.clearInvalidSession();
       }
       
       console.log('No valid stored session');
       return null;
     } catch (error) {
       console.error('getCurrentUser error:', error);
+      // Clear invalid session data on error
+      this.clearInvalidSession();
       return null;
     }
   }
@@ -106,6 +112,19 @@ export class AuthService {
     const url = import.meta.env.VITE_SUPABASE_URL || '';
     const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
     return match ? match[1] : 'unknown';
+  }
+  
+  private clearInvalidSession(): void {
+    try {
+      const projectRef = this.getProjectRef();
+      const sessionKey = `sb-${projectRef}-auth-token`;
+      if (localStorage.getItem(sessionKey)) {
+        console.log('Clearing invalid session data');
+        localStorage.removeItem(sessionKey);
+      }
+    } catch (error) {
+      console.warn('Failed to clear invalid session:', error);
+    }
   }
     
 
