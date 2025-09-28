@@ -606,6 +606,8 @@ const App: React.FC = () => {
                 events={events}
                 onTaskComplete={handleTaskComplete}
                 onTaskReschedule={handleTaskReschedule}
+                onTaskUpdate={handleUpdateTask}
+                onTaskDelete={handleDeleteTask}
                 isOptimizing={isOptimizing}
               />
             ) : (
