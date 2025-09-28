@@ -182,14 +182,14 @@ export class DatabaseService {
       // Create a timeout signal
       const TIMEOUT_SIGNAL = Symbol('timeout');
       const timeoutPromise = new Promise((resolve) => 
-        setTimeout(() => resolve(TIMEOUT_SIGNAL), 10000) // 10 second timeout
+        setTimeout(() => resolve(TIMEOUT_SIGNAL), 30000) // 30 second timeout
       );
       
       const result = await Promise.race([insertPromise, timeoutPromise]);
 
       // Check if timeout occurred
       if (result === TIMEOUT_SIGNAL) {
-        console.warn('Database insert timed out after 10 seconds');
+        console.warn('Database insert timed out after 30 seconds');
         throw new Error('Database operation timed out. Please try again.');
       }
 
