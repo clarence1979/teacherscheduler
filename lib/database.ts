@@ -189,10 +189,21 @@ export class DatabaseService {
 
     try {
       console.log('Building Supabase query...');
-    let query = supabase
-      .from('tasks')
-      .select('*')
-      .eq('user_id', userId);
+      // Check if we have valid Supabase configuration
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey || 
+          supabaseUrl === 'your_supabase_url_here' || 
+          supabaseKey === 'your_supabase_anon_key_here') {
+        console.log('Supabase not properly configured, skipping database query');
+        return [];
+      }
+
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .eq('user_id', userId);
 
       if (filters?.projectId) {
         query = query.eq('project_id', filters.projectId);
@@ -204,19 +215,12 @@ export class DatabaseService {
         query = query.eq('state', filters.state);
       }
 
-      console.log('Executing Supabase query with timeout...');
-      
-      // Add timeout to the query
-      const queryPromise = query.order('created_at', { ascending: false });
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database query timeout')), 60000)
-      );
-      
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      console.log('Executing Supabase query...');
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('Supabase query error:', error);
-        throw error;
+        return [];
       }
       
       console.log('Query successful, received data:', data?.length || 0, 'tasks');
