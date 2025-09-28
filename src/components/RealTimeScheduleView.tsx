@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Calendar, Target, AlertTriangle, TrendingUp, CheckCircle, Zap, RotateCcw, Edit, Trash2, Eye, Plus, Minus } from 'lucide-react';
+import { Clock, Calendar, Target, AlertTriangle, TrendingUp, CheckCircle, Zap, RotateCcw, CreditCard as Edit, Trash2, Eye, Plus, Minus } from 'lucide-react';
 import { ScheduledTask, OptimizationResult, Event } from '../../lib/types';
 
 interface RealTimeScheduleViewProps {
