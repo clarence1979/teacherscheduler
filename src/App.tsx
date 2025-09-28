@@ -193,32 +193,50 @@ const App: React.FC = () => {
     try {
       if (db.isAvailable()) {
         console.log('Creating task in database...');
-        // Create task in database
-        const dbTaskData = {
-          name: taskData.name,
-          description: taskData.description || '',
-          priority: taskData.priority,
-          estimated_minutes: taskData.estimatedMinutes,
-          deadline: taskData.deadline?.toISOString(),
-          task_type: taskData.type,
-          is_flexible: taskData.isFlexible,
-          chunkable: taskData.chunkable,
-          min_chunk_minutes: taskData.minChunkMinutes || 15,
-          max_chunk_minutes: taskData.maxChunkMinutes,
-          dependencies: taskData.dependencies || [],
-          project_id: taskData.projectId,
-          workspace_id: undefined
-        };
-        
-        console.log('Database task data:', dbTaskData);
-        const newTask = await db.createTask(user.id, dbTaskData);
-        console.log('Task created in database:', newTask);
-        
-        const updatedTasks = [...tasks, newTask];
-        setTasks(updatedTasks);
-        console.log('Updated tasks list, optimizing schedule...');
-        await optimizeSchedule(updatedTasks);
-        console.log('Task added and schedule optimized successfully');
+        try {
+          // Create task in database with timeout
+          const dbTaskData = {
+            name: taskData.name,
+            description: taskData.description || '',
+            priority: taskData.priority,
+            estimated_minutes: taskData.estimatedMinutes,
+            deadline: taskData.deadline?.toISOString(),
+            task_type: taskData.type,
+            is_flexible: taskData.isFlexible,
+            chunkable: taskData.chunkable,
+            min_chunk_minutes: taskData.minChunkMinutes || 15,
+            max_chunk_minutes: taskData.maxChunkMinutes,
+            dependencies: taskData.dependencies || [],
+            project_id: taskData.projectId || null,
+            workspace_id: null
+          };
+          
+          console.log('Database task data:', dbTaskData);
+          const newTask = await db.createTask(user.id, dbTaskData);
+          console.log('Task created in database:', newTask);
+          
+          const updatedTasks = [...tasks, newTask];
+          setTasks(updatedTasks);
+          console.log('Updated tasks list, optimizing schedule...');
+          await optimizeSchedule(updatedTasks);
+          console.log('Task added and schedule optimized successfully');
+        } catch (dbError) {
+          console.warn('Database task creation failed, falling back to local storage:', dbError);
+          // Fall back to local task creation if database fails
+          const newTask: Task = {
+            ...taskData,
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            userId: user.id,
+            state: 'To Do',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          const updatedTasks = [...tasks, newTask];
+          setTasks(updatedTasks);
+          await optimizeSchedule(updatedTasks);
+          console.log('Task added locally and schedule optimized');
+        }
       } else {
         console.log('Database not available, creating task locally only');
         // Fallback to local state if database not available

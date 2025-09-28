@@ -162,17 +162,50 @@ export class DatabaseService {
 
   // Task Management
   async createTask(userId: string, taskData: Omit<Tables['tasks']['Insert'], 'user_id'>): Promise<Task> {
-    const { data, error } = await supabase
-      .from('tasks')
-      .insert({
-        ...taskData,
-        user_id: userId
-      })
-      .select()
-      .single();
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
 
-    if (error) throw error;
-    return this.mapTaskFromDB(data);
+    try {
+      console.log('Creating task in database with timeout...');
+      
+      // Add timeout wrapper to prevent hanging
+      const insertPromise = supabase
+        .from('tasks')
+        .insert({
+          ...taskData,
+          user_id: userId
+        })
+        .select()
+        .single();
+      
+      // Create a timeout signal
+      const TIMEOUT_SIGNAL = Symbol('timeout');
+      const timeoutPromise = new Promise((resolve) => 
+        setTimeout(() => resolve(TIMEOUT_SIGNAL), 10000) // 10 second timeout
+      );
+      
+      const result = await Promise.race([insertPromise, timeoutPromise]);
+
+      // Check if timeout occurred
+      if (result === TIMEOUT_SIGNAL) {
+        console.warn('Database insert timed out after 10 seconds');
+        throw new Error('Database operation timed out. Please try again.');
+      }
+
+      const { data, error } = result as any;
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+
+      console.log('Task created successfully in database');
+      return this.mapTaskFromDB(data);
+    } catch (error) {
+      console.error('Database createTask error:', error);
+      throw error;
+    }
   }
 
   async getTasks(userId: string, filters?: {
