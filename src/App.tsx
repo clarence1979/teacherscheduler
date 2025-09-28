@@ -186,43 +186,24 @@ const App: React.FC = () => {
       return;
     }
 
+    console.log('Adding task:', taskData);
+
     try {
-      // Convert Task data to database format
-      const dbTaskData = {
-        name: taskData.name,
-        description: taskData.description || '',
-        priority: taskData.priority,
-        estimated_minutes: taskData.estimatedMinutes,
-        deadline: taskData.deadline?.toISOString(),
-        task_type: taskData.type,
-        is_flexible: taskData.isFlexible,
-        chunkable: taskData.chunkable,
-        min_chunk_minutes: taskData.minChunkMinutes,
-        max_chunk_minutes: taskData.maxChunkMinutes,
-        dependencies: taskData.dependencies || [],
-        project_id: taskData.projectId,
-        workspace_id: undefined
+      // Create task with local state (skip database for now)
+      const newTask: Task = {
+        ...taskData,
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        userId: user.id,
+        state: 'To Do',
+        createdAt: new Date(),
+        updatedAt: new Date()
       };
 
-      let newTask: Task;
-      
-      if (db.isAvailable()) {
-        // Save to database
-        newTask = await db.createTask(user.id, dbTaskData);
-      } else {
-        // Fallback to local state
-        newTask = {
-          ...taskData,
-          id: Date.now().toString(),
-          userId: user.id,
-          state: 'To Do',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-      }
+      console.log('Created task:', newTask);
 
       const updatedTasks = [...tasks, newTask];
       setTasks(updatedTasks);
+      console.log('Updated tasks list, optimizing schedule...');
       await optimizeSchedule(updatedTasks);
     } catch (error) {
       console.error('Failed to add task:', error);
