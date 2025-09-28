@@ -72,16 +72,8 @@ export class AuthService {
 
       console.log('Getting current user from Supabase...');
       
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Supabase auth timeout')), 20000);
-      });
-      
-      // Get the user
-      const { data: { user }, error } = await Promise.race([
-        supabase.auth.getUser(),
-        timeoutPromise
-      ]);
+      // Get the user without timeout - let Supabase handle its own timeouts
+      const { data: { user }, error } = await supabase.auth.getUser();
       
       if (error) {
         console.log('Auth error (expected if not logged in):', error.message);
@@ -97,14 +89,7 @@ export class AuthService {
 
       // Get profile data
       try {
-        const profilePromise = new Promise<any>((resolve, reject) => {
-          setTimeout(() => reject(new Error('Profile fetch timeout')), 3000);
-        });
-        
-        const profile = await Promise.race([
-          db.getProfile(user.id),
-          profilePromise
-        ]);
+        const profile = await db.getProfile(user.id);
         
         const userData = {
           id: user.id,
