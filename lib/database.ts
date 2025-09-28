@@ -180,6 +180,13 @@ export class DatabaseService {
     workspaceId?: string;
     state?: string;
   }): Promise<Task[]> {
+    console.log('Database getTasks called for user:', userId);
+    
+    if (!this.isAvailable()) {
+      console.log('Database not available, returning empty tasks');
+      return [];
+    }
+
     let query = supabase
       .from('tasks')
       .select('*')
@@ -195,9 +202,11 @@ export class DatabaseService {
       query = query.eq('state', filters.state);
     }
 
+    console.log('Executing Supabase query...');
     const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
+    console.log('Query successful, mapping tasks...');
     return data.map(this.mapTaskFromDB);
   }
 

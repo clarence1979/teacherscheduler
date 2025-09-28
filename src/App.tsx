@@ -119,18 +119,36 @@ const App: React.FC = () => {
   }, []);
 
   const loadUserTasks = async (userId: string) => {
-    if (!db.isAvailable()) return;
+    if (!db.isAvailable()) {
+      console.log('Database not available, skipping task loading');
+      setTasksLoading(false);
+      return;
+    }
     
     setTasksLoading(true);
+    console.log('Loading tasks for user:', userId);
     try {
-      const userTasks = await db.getTasks(userId);
+      // Use a timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Task loading timeout')), 10000)
+      );
+      
+      const taskPromise = db.getTasks(userId);
+      
+      const userTasks = await Promise.race([taskPromise, timeoutPromise]) as Task[];
+      console.log('Tasks loaded successfully:', userTasks.length);
       setTasks(userTasks);
+      
       if (userTasks.length > 0) {
+        console.log('Optimizing schedule...');
         await optimizeSchedule(userTasks);
       }
     } catch (error) {
       console.error('Failed to load tasks:', error);
+      // Don't fail completely, just use empty tasks
+      setTasks([]);
     } finally {
+      console.log('Task loading completed');
       setTasksLoading(false);
     }
   };
