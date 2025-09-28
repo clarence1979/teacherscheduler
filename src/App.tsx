@@ -141,7 +141,7 @@ const App: React.FC = () => {
       
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Authentication check timeout')), 10000);
+        setTimeout(() => reject(new Error('Authentication check timeout')), 20000);
       });
       
       // Check if Supabase is available first
