@@ -119,21 +119,30 @@ const App: React.FC = () => {
   }, []);
 
   const loadUserTasks = async (userId: string) => {
+    setTasksLoading(true);
+    console.log('Loading tasks for user:', userId);
+    
     if (!db.isAvailable()) {
-      console.log('Database not available, skipping task loading');
+      console.log('Database not available, using empty task list');
+      setTasks([]);
       setTasksLoading(false);
       return;
     }
     
-    setTasksLoading(true);
-    console.log('Loading tasks for user:', userId);
     try {
-      // Skip database loading for now to prevent timeout
-      console.log('Skipping database task loading to prevent timeout');
-      setTasks([]);
+      console.log('Attempting to load tasks from database...');
+      const userTasks = await db.getTasks(userId);
+      console.log('Successfully loaded tasks:', userTasks.length);
+      setTasks(userTasks);
+      
+      // Optimize schedule with loaded tasks
+      if (userTasks.length > 0) {
+        console.log('Optimizing schedule with loaded tasks...');
+        await optimizeSchedule(userTasks);
+      }
     } catch (error) {
       console.error('Failed to load tasks:', error);
-      // Don't fail completely, just use empty tasks
+      // Fall back to empty tasks if loading fails
       setTasks([]);
     } finally {
       console.log('Task loading completed');
@@ -189,31 +198,57 @@ const App: React.FC = () => {
     console.log('Adding task:', taskData);
 
     try {
-      // Create task with local state (skip database for now)
-      const newTask: Task = {
-        ...taskData,
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        userId: user.id,
-        state: 'To Do',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      if (db.isAvailable()) {
+        console.log('Creating task in database...');
+        // Create task in database
+        const dbTaskData = {
+          name: taskData.name,
+          description: taskData.description || '',
+          priority: taskData.priority,
+          estimated_minutes: taskData.estimatedMinutes,
+          deadline: taskData.deadline?.toISOString(),
+          task_type: taskData.type,
+          is_flexible: taskData.isFlexible,
+          chunkable: taskData.chunkable,
+          min_chunk_minutes: taskData.minChunkMinutes || 15,
+          max_chunk_minutes: taskData.maxChunkMinutes,
+          dependencies: taskData.dependencies || []
+        };
+        
+        const newTask = await db.createTask(user.id, dbTaskData);
+        console.log('Task created in database:', newTask);
+        
+        const updatedTasks = [...tasks, newTask];
+        setTasks(updatedTasks);
+        console.log('Updated tasks list, optimizing schedule...');
+        await optimizeSchedule(updatedTasks);
+      } else {
+        console.log('Database not available, creating task locally only');
+        // Fallback to local state if database not available
+        const newTask: Task = {
+          ...taskData,
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          userId: user.id,
+          state: 'To Do',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
 
-      console.log('Created task:', newTask);
-
-      const updatedTasks = [...tasks, newTask];
-      setTasks(updatedTasks);
-      console.log('Updated tasks list, optimizing schedule...');
-      await optimizeSchedule(updatedTasks);
+        const updatedTasks = [...tasks, newTask];
+        setTasks(updatedTasks);
+        await optimizeSchedule(updatedTasks);
+      }
     } catch (error) {
       console.error('Failed to add task:', error);
+      // Show user-friendly error message
+      alert('Failed to save task. Please try again.');
     }
   };
 
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
       if (db.isAvailable()) {
-        // Update in database
+        console.log('Updating task in database:', updatedTask.id);
         const dbUpdates = {
           name: updatedTask.name,
           description: updatedTask.description || '',
@@ -233,6 +268,7 @@ const App: React.FC = () => {
         };
         
         await db.updateTask(updatedTask.id, dbUpdates);
+        console.log('Task updated in database successfully');
       }
 
       const updatedTasks = tasks.map(task => 
@@ -242,13 +278,16 @@ const App: React.FC = () => {
       await optimizeSchedule(updatedTasks);
     } catch (error) {
       console.error('Failed to update task:', error);
+      alert('Failed to update task. Please try again.');
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
       if (db.isAvailable()) {
+        console.log('Deleting task from database:', taskId);
         await db.deleteTask(taskId);
+        console.log('Task deleted from database successfully');
       }
 
       const updatedTasks = tasks.filter(task => task.id !== taskId);
@@ -256,6 +295,7 @@ const App: React.FC = () => {
       await optimizeSchedule(updatedTasks);
     } catch (error) {
       console.error('Failed to delete task:', error);
+      alert('Failed to delete task. Please try again.');
     }
   };
 

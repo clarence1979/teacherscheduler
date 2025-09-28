@@ -187,27 +187,54 @@ export class DatabaseService {
       return [];
     }
 
+    try {
+      console.log('Building Supabase query...');
     let query = supabase
       .from('tasks')
       .select('*')
       .eq('user_id', userId);
 
-    if (filters?.projectId) {
-      query = query.eq('project_id', filters.projectId);
-    }
-    if (filters?.workspaceId) {
-      query = query.eq('workspace_id', filters.workspaceId);
-    }
-    if (filters?.state) {
-      query = query.eq('state', filters.state);
-    }
+      if (filters?.projectId) {
+        query = query.eq('project_id', filters.projectId);
+      }
+      if (filters?.workspaceId) {
+        query = query.eq('workspace_id', filters.workspaceId);
+      }
+      if (filters?.state) {
+        query = query.eq('state', filters.state);
+      }
 
-    console.log('Executing Supabase query...');
-    const { data, error } = await query.order('created_at', { ascending: false });
+      console.log('Executing Supabase query with timeout...');
+      
+      // Add timeout to the query
+      const queryPromise = query.order('created_at', { ascending: false });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 15000)
+      );
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-    if (error) throw error;
-    console.log('Query successful, mapping tasks...');
-    return data.map(this.mapTaskFromDB);
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
+      
+      console.log('Query successful, received data:', data?.length || 0, 'tasks');
+      
+      if (!data) {
+        console.log('No data returned from query');
+        return [];
+      }
+      
+      console.log('Mapping tasks from database...');
+      const mappedTasks = data.map(this.mapTaskFromDB);
+      console.log('Successfully mapped', mappedTasks.length, 'tasks');
+      return mappedTasks;
+    } catch (error) {
+      console.error('Database getTasks error:', error);
+      // Return empty array instead of throwing to prevent app crash
+      return [];
+    }
   }
 
   async updateTask(taskId: string, updates: Tables['tasks']['Update']): Promise<Task> {
