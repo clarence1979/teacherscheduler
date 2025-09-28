@@ -143,6 +143,7 @@ const App: React.FC = () => {
       if (!isSupabaseAvailable()) {
         console.warn('Supabase not configured - running in demo mode');
         setInitialAuthError('Database not configured. Please set up Supabase to enable authentication and data persistence.');
+        setUser(null);
         setLoading(false);
         return;
       }
@@ -151,9 +152,9 @@ const App: React.FC = () => {
       const currentUser = await auth.getCurrentUser();
       console.log('Auth check result:', currentUser);
       setUser(currentUser);
-      if (currentUser) {
-        await loadUserTasks(currentUser.id);
-      }
+      
+      // Don't load tasks during initial auth check to avoid hanging
+      // Tasks will be loaded after auth state is established
     } catch (error) {
       console.error('Auth check failed:', error);
       const errorMessage = (error as Error).message || 'Authentication failed';

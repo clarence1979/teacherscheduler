@@ -66,50 +66,38 @@ export class AuthService {
   async getCurrentUser(): Promise<User | null> {
     try {
       if (!this.isAvailable()) {
-        console.log('Supabase not available - user authentication disabled');
+        console.log('Supabase not available - returning null user');
         return null;
       }
 
-      console.log('Getting current user from Supabase...');
+      console.log('Getting current user from Supabase session...');
       
-      // Get the user without timeout - let Supabase handle its own timeouts
-      const { data: { user }, error } = await supabase.auth.getUser();
+      // Use getSession instead of getUser to avoid hanging
+      const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.log('Auth error (expected if not logged in):', error.message);
+        console.log('Session error:', error.message);
         return null;
       }
     
-      if (!user) {
-        console.log('No authenticated user found');
+      if (!session?.user) {
+        console.log('No active session found');
         return null;
       }
 
-      console.log('User found, fetching profile...');
+      const user = session.user;
+      console.log('Session found, user ID:', user.id);
 
-      // Get profile data
-      try {
-        const profile = await db.getProfile(user.id);
-        
-        const userData = {
-          id: user.id,
-          email: user.email!,
-          fullName: profile?.full_name || user.user_metadata?.full_name || undefined,
-          avatarUrl: profile?.avatar_url || undefined
-        };
-        
-        console.log('User data prepared:', userData);
-        return userData;
-      } catch (profileError) {
-        console.log('Profile fetch error (using fallback):', profileError);
-        // Return user without profile data if profile fetch fails
-        return {
-          id: user.id,
-          email: user.email!,
-          fullName: user.user_metadata?.full_name || undefined,
-          avatarUrl: undefined
-        };
-      }
+      // Return user data without profile fetch to avoid hanging
+      const userData = {
+        id: user.id,
+        email: user.email!,
+        fullName: user.user_metadata?.full_name || undefined,
+        avatarUrl: undefined
+      };
+      
+      console.log('User data prepared:', userData);
+      return userData;
     } catch (error) {
       console.error('getCurrentUser error:', error);
       return null;
