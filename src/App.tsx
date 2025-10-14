@@ -392,9 +392,19 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors relative">
+      {/* Background Image Overlay */}
+      <div
+        className="fixed inset-0 opacity-[0.03] dark:opacity-[0.02] pointer-events-none z-0"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/1370298/pexels-photo-1370298.jpeg?auto=compress&cs=tinysrgb&w=1920)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      />
       {/* Header */}
-      <header className="app-header sticky top-0 z-50">
+      <header className="app-header sticky top-0 z-50 relative">
         <div className="header-content">
           <div className="brand-section">
             <a href="#" className="brand-logo">
@@ -622,7 +632,7 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {!user ? (
           <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
             <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
