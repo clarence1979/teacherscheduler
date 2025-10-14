@@ -388,9 +388,8 @@ const CalendarConnectionModal: React.FC<{
           </button>
           
           {connectionMethod === 'google' ? (
-            <button 
-            onClick={handleMicrosoftConnect}
-              onClick={googleAuth.isConfigured() ? onGoogleConnect : onDemoConnect}
+            <button
+              onClick={handleGoogleConnect}
               disabled={isConnecting}
             >
               {isConnecting ? 'Connecting...' : googleAuth.isConfigured() ? 'Connect with Google' : 'Connect with Demo Mode'}

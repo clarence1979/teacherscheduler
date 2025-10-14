@@ -501,6 +501,194 @@ export class DatabaseService {
       provider: dbEvent.provider || undefined
     };
   }
+
+  async getStudents(userId: string): Promise<any[]> {
+    if (!this.isAvailable()) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .eq('user_id', userId)
+      .order('last_name', { ascending: true });
+
+    if (error) {
+      console.error('Failed to fetch students:', error);
+      return [];
+    }
+
+    return data.map((s: any) => ({
+      id: s.id,
+      firstName: s.first_name,
+      lastName: s.last_name,
+      email: s.email,
+      phone: s.phone,
+      parentName: s.parent_name,
+      parentEmail: s.parent_email,
+      parentPhone: s.parent_phone,
+      grade: s.grade,
+      studentId: s.student_id,
+      notes: s.notes,
+      createdAt: new Date(s.created_at)
+    }));
+  }
+
+  async createStudent(userId: string, studentData: any): Promise<any> {
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
+
+    const { data, error } = await supabase
+      .from('students')
+      .insert({
+        user_id: userId,
+        first_name: studentData.firstName,
+        last_name: studentData.lastName,
+        email: studentData.email,
+        phone: studentData.phone,
+        parent_name: studentData.parentName,
+        parent_email: studentData.parentEmail,
+        parent_phone: studentData.parentPhone,
+        grade: studentData.grade,
+        student_id: studentData.studentId,
+        notes: studentData.notes
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      email: data.email,
+      phone: data.phone,
+      parentName: data.parent_name,
+      parentEmail: data.parent_email,
+      parentPhone: data.parent_phone,
+      grade: data.grade,
+      studentId: data.student_id,
+      notes: data.notes,
+      createdAt: new Date(data.created_at)
+    };
+  }
+
+  async updateStudent(studentId: string, updates: any): Promise<void> {
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
+
+    const dbUpdates: any = {};
+    if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName;
+    if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.parentName !== undefined) dbUpdates.parent_name = updates.parentName;
+    if (updates.parentEmail !== undefined) dbUpdates.parent_email = updates.parentEmail;
+    if (updates.parentPhone !== undefined) dbUpdates.parent_phone = updates.parentPhone;
+    if (updates.grade !== undefined) dbUpdates.grade = updates.grade;
+    if (updates.studentId !== undefined) dbUpdates.student_id = updates.studentId;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+
+    const { error } = await supabase
+      .from('students')
+      .update(dbUpdates)
+      .eq('id', studentId);
+
+    if (error) throw error;
+  }
+
+  async deleteStudent(studentId: string): Promise<void> {
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
+
+    const { error } = await supabase
+      .from('students')
+      .delete()
+      .eq('id', studentId);
+
+    if (error) throw error;
+  }
+
+  async getAttendanceByDate(userId: string, date: Date): Promise<any[]> {
+    if (!this.isAvailable()) {
+      return [];
+    }
+
+    const dateStr = date.toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('date', dateStr)
+      .lt('date', new Date(date.getTime() + 86400000).toISOString().split('T')[0]);
+
+    if (error) {
+      console.error('Failed to fetch attendance:', error);
+      return [];
+    }
+
+    return data.map((a: any) => ({
+      id: a.id,
+      studentId: a.student_id,
+      date: new Date(a.date),
+      status: a.status,
+      notes: a.notes,
+      arrivedAt: a.arrived_at
+    }));
+  }
+
+  async createAttendance(userId: string, attendanceData: any): Promise<any> {
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
+
+    const { data, error } = await supabase
+      .from('attendance')
+      .insert({
+        user_id: userId,
+        student_id: attendanceData.studentId,
+        date: attendanceData.date.toISOString().split('T')[0],
+        status: attendanceData.status,
+        notes: attendanceData.notes,
+        arrived_at: attendanceData.arrivedAt
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      studentId: data.student_id,
+      date: new Date(data.date),
+      status: data.status,
+      notes: data.notes,
+      arrivedAt: data.arrived_at
+    };
+  }
+
+  async updateAttendance(attendanceId: string, updates: any): Promise<void> {
+    if (!this.isAvailable()) {
+      throw new Error('Database not available');
+    }
+
+    const dbUpdates: any = {};
+    if (updates.status !== undefined) dbUpdates.status = updates.status;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.arrivedAt !== undefined) dbUpdates.arrived_at = updates.arrivedAt;
+
+    const { error } = await supabase
+      .from('attendance')
+      .update(dbUpdates)
+      .eq('id', attendanceId);
+
+    if (error) throw error;
+  }
 }
 
 export const db = new DatabaseService();

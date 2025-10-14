@@ -138,7 +138,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4 transition-colors">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4 transition-colors">
       <div className="w-full max-w-md">
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8 transition-colors">
           <div className="auth-header">
@@ -152,7 +152,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
               </button>
             </div>
             <div className="auth-logo">
-              <div className="text-4xl mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">🧠</div>
+              <div className="text-4xl mb-4">🧠</div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Teacher Scheduler AI</h1>
               <p className="text-sm text-gray-600 dark:text-gray-300">Intelligent Teaching Assistant</p>
             </div>
@@ -293,7 +293,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, initialError }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-[1.02]"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all duration-200 transform hover:scale-[1.02]"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

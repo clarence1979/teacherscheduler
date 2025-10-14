@@ -22,6 +22,8 @@ import Analytics from './components/Analytics';
 import AIEmployees from './components/AIEmployees';
 import Settings from './components/Settings';
 import CalendarConnection from './components/CalendarConnection';
+import StudentRoster from './components/StudentRoster';
+import AttendanceTracker from './components/AttendanceTracker';
 import Auth from './components/Auth';
 import { Task, Event, UserSchedule, OptimizationResult } from '../lib/types';
 import { User as AuthUser } from '../lib/auth';
@@ -31,7 +33,7 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [initialAuthError, setInitialAuthError] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(false);
-  const [currentView, setCurrentView] = useState<'schedule' | 'tasks' | 'workspaces' | 'meetings' | 'analytics' | 'ai-employees'>('schedule');
+  const [currentView, setCurrentView] = useState<'schedule' | 'tasks' | 'workspaces' | 'meetings' | 'analytics' | 'ai-employees' | 'students' | 'attendance'>('schedule');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [optimizationResult, setOptimizationResult] = useState<OptimizationResult | null>(null);
@@ -374,7 +376,7 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <div className="mb-8">
             <div className="text-6xl mb-4 animate-pulse">🧠</div>
@@ -389,12 +391,12 @@ const App: React.FC = () => {
     );
   }
 
-  if (!user) {
-    return <Auth onAuthSuccess={handleAuthSuccess} initialError={initialAuthError} />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors">
+      {!user ? (
+        <Auth onAuthSuccess={handleAuthSuccess} initialError={initialAuthError} />
+      ) : (
+        <>
       {/* Header */}
       <header className="app-header sticky top-0 z-50">
         <div className="header-content">
@@ -421,10 +423,16 @@ const App: React.FC = () => {
                 ✅ Tasks
               </button>
               <button
-                onClick={() => setCurrentView('workspaces')}
-                className={`nav-button ${currentView === 'workspaces' ? 'active' : ''}`}
+                onClick={() => setCurrentView('students')}
+                className={`nav-button ${currentView === 'students' ? 'active' : ''}`}
               >
-                📁 Workspaces
+                👨‍🎓 Students
+              </button>
+              <button
+                onClick={() => setCurrentView('attendance')}
+                className={`nav-button ${currentView === 'attendance' ? 'active' : ''}`}
+              >
+                📋 Attendance
               </button>
               <button
                 onClick={() => setCurrentView('meetings')}
@@ -531,60 +539,70 @@ const App: React.FC = () => {
           <div className="lg:hidden border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <nav className="px-4 py-2 space-y-1">
               <button
-                onClick={() => setCurrentView('schedule')}
+                onClick={() => { setCurrentView('schedule'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'schedule' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'schedule'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 📅 Schedule
               </button>
               <button
-                onClick={() => setCurrentView('tasks')}
+                onClick={() => { setCurrentView('tasks'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'tasks' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'tasks'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 ✅ Tasks
               </button>
               <button
-                onClick={() => setCurrentView('workspaces')}
+                onClick={() => { setCurrentView('students'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'workspaces' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'students'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
-                📁 Workspaces
+                👨‍🎓 Students
               </button>
               <button
-                onClick={() => setCurrentView('meetings')}
+                onClick={() => { setCurrentView('attendance'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'meetings' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'attendance'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                📋 Attendance
+              </button>
+              <button
+                onClick={() => { setCurrentView('meetings'); setShowMobileNav(false); }}
+                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
+                  currentView === 'meetings'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 🤝 Meetings
               </button>
               <button
-                onClick={() => setCurrentView('analytics')}
+                onClick={() => { setCurrentView('analytics'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'analytics' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'analytics'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 📊 Analytics
               </button>
               <button
-                onClick={() => setCurrentView('ai-employees')}
+                onClick={() => { setCurrentView('ai-employees'); setShowMobileNav(false); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                  currentView === 'ai-employees' 
-                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' 
+                  currentView === 'ai-employees'
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -633,6 +651,14 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {currentView === 'students' && user && (
+          <StudentRoster userId={user.id} />
+        )}
+
+        {currentView === 'attendance' && user && (
+          <AttendanceTracker userId={user.id} />
+        )}
+
         {currentView === 'workspaces' && (
           <WorkspaceManagerComponent
             workspaceManager={workspaceManager}
@@ -671,6 +697,8 @@ const App: React.FC = () => {
           />
         )}
       </main>
+        </>
+      )}
     </div>
   );
 };
