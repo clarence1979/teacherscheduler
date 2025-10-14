@@ -24,7 +24,7 @@ import Settings from './components/Settings';
 import CalendarConnection from './components/CalendarConnection';
 import StudentRoster from './components/StudentRoster';
 import AttendanceTracker from './components/AttendanceTracker';
-import Auth from './components/Auth';
+import InlineAuth from './components/InlineAuth';
 import { Task, Event, UserSchedule, OptimizationResult } from '../lib/types';
 import { User as AuthUser } from '../lib/auth';
 
@@ -393,10 +393,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors">
-      {!user ? (
-        <Auth onAuthSuccess={handleAuthSuccess} initialError={initialAuthError} />
-      ) : (
-        <>
       {/* Header */}
       <header className="app-header sticky top-0 z-50">
         <div className="header-content">
@@ -456,86 +452,98 @@ const App: React.FC = () => {
           </div>
 
           <div className="user-section">
-            <CalendarConnection
-              onConnect={handleCalendarConnect}
-              isConnected={false}
-            />
-            
-            <button
-              onClick={toggleTheme}
-              className="theme-toggle tooltip"
-              data-tooltip={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-            >
-              {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-            </button>
-            
-            <div className="flex items-center">
-              <Settings
-                onApiKeyUpdate={handleApiKeyUpdate}
-                currentApiKey={openaiApiKey}
-              />
-            </div>
-            
-            <div className="relative">
+            {user ? (
+              <>
+                <CalendarConnection
+                  onConnect={handleCalendarConnect}
+                  isConnected={false}
+                />
+
+                <button
+                  onClick={toggleTheme}
+                  className="theme-toggle tooltip"
+                  data-tooltip={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                  aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                >
+                  {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                </button>
+
+                <div className="flex items-center">
+                  <Settings
+                    onApiKeyUpdate={handleApiKeyUpdate}
+                    currentApiKey={openaiApiKey}
+                  />
+                </div>
+
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="user-menu"
+                    aria-expanded={showUserMenu}
+                    aria-haspopup="true"
+                  >
+                    <div className="user-avatar">
+                      {getUserInitials(user.fullName, user.email)}
+                    </div>
+                    <div className="user-info hidden sm:block">
+                      <div className="user-name">{user.fullName || user.email}</div>
+                      <div className="user-role">Teacher</div>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  </button>
+
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700">
+                        <div className="font-medium text-gray-900 dark:text-white">{user.fullName || 'User'}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                      >
+                        <User className="h-4 w-4" />
+                        Profile Settings
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          auth.signOut();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile Navigation Toggle */}
+                <button
+                  onClick={() => setShowMobileNav(!showMobileNav)}
+                  className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                  aria-label="Toggle mobile navigation"
+                >
+                  {showMobileNav ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                </button>
+              </>
+            ) : (
               <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="user-menu"
-                aria-expanded={showUserMenu}
-                aria-haspopup="true"
+                onClick={toggleTheme}
+                className="theme-toggle tooltip"
+                data-tooltip={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+                aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               >
-                <div className="user-avatar">
-                  {getUserInitials(user.fullName, user.email)}
-                </div>
-                <div className="user-info hidden sm:block">
-                  <div className="user-name">{user.fullName || user.email}</div>
-                  <div className="user-role">Teacher</div>
-                </div>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
               </button>
-              
-              {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
-                  <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700">
-                    <div className="font-medium text-gray-900 dark:text-white">{user.fullName || 'User'}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      // Add profile settings logic here
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-2"
-                  >
-                    <User className="h-4 w-4" />
-                    Profile Settings
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      auth.signOut();
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-            
-            {/* Mobile Navigation Toggle */}
-            <button
-              onClick={() => setShowMobileNav(!showMobileNav)}
-              className="lg:hidden p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-              aria-label="Toggle mobile navigation"
-            >
-              {showMobileNav ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            )}
           </div>
         </div>
         
         {/* Mobile Navigation */}
-        {showMobileNav && (
+        {showMobileNav && user && (
           <div className="lg:hidden border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
             <nav className="px-4 py-2 space-y-1">
               <button
@@ -615,24 +623,76 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {currentView === 'schedule' && (
-          <div className="space-y-6 fade-in">
-            <TaskForm onAddTask={handleAddTask} />
-            {optimizationResult ? (
-              <RealTimeScheduleView
-                optimizationResult={optimizationResult}
-                events={events}
-                onTaskComplete={handleTaskComplete}
-                onTaskReschedule={handleTaskReschedule}
-                onTaskUpdate={handleUpdateTask}
-                onTaskDelete={handleDeleteTask}
-                isOptimizing={isOptimizing}
-              />
-            ) : (
-              <ScheduleView optimizationResult={{ schedule: [], happinessScore: 0, confidence: 0, unscheduledTasks: [], recommendations: [], warnings: [] }} />
-            )}
+        {!user ? (
+          <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
+            <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
+              {/* Welcome Section */}
+              <div className="space-y-6">
+                <div className="text-6xl mb-6">🧠</div>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  Teacher Scheduler AI
+                </h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
+                  Your intelligent teaching assistant that helps automate scheduling, track students, manage attendance, and optimize your teaching workflow.
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">📅</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">AI-Powered Scheduling</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Automatically optimize your tasks and lesson plans</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">👨‍🎓</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">Student Management</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Track student information and parent contacts</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">📋</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">Attendance Tracking</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Quick and easy daily attendance recording</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🤖</div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white">AI Teaching Assistants</h3>
+                      <p className="text-gray-600 dark:text-gray-400">Specialized AI helpers for lesson planning, grading, and more</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Login Form Section */}
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 p-8">
+                <InlineAuth onAuthSuccess={handleAuthSuccess} initialError={initialAuthError} />
+              </div>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {currentView === 'schedule' && (
+              <div className="space-y-6 fade-in">
+                <TaskForm onAddTask={handleAddTask} />
+                {optimizationResult ? (
+                  <RealTimeScheduleView
+                    optimizationResult={optimizationResult}
+                    events={events}
+                    onTaskComplete={handleTaskComplete}
+                    onTaskReschedule={handleTaskReschedule}
+                    onTaskUpdate={handleUpdateTask}
+                    onTaskDelete={handleDeleteTask}
+                    isOptimizing={isOptimizing}
+                  />
+                ) : (
+                  <ScheduleView optimizationResult={{ schedule: [], happinessScore: 0, confidence: 0, unscheduledTasks: [], recommendations: [], warnings: [] }} />
+                )}
+              </div>
+            )}
 
         {currentView === 'tasks' && (
           <div className="space-y-6 fade-in">
@@ -695,10 +755,10 @@ const App: React.FC = () => {
               });
             }}
           />
+            )}
+          </>
         )}
       </main>
-        </>
-      )}
     </div>
   );
 };
