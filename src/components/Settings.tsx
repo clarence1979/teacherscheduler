@@ -79,7 +79,7 @@ const Settings: React.FC<SettingsProps> = ({ onApiKeyUpdate, currentApiKey }) =>
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="flex items-center gap-2">
+              <h3 className="flex items-center gap-2 text-gray-900 dark:text-white">
                 <SettingsIcon className="h-5 w-5" />
                 Settings
               </h3>
