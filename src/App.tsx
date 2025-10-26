@@ -77,7 +77,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     checkAuth();
-    
+
     // Set up auth state listener
     const { data: { subscription } } = auth.onAuthStateChange(async (user) => {
       setUser(user);
@@ -87,24 +87,50 @@ const App: React.FC = () => {
         setTasks([]);
       }
     });
-    
+
     // Check for stored Google authentication
     if (googleAuth.loadStoredTokens()) {
       console.log('Google authentication restored from storage');
     }
-    
+
     // Check for stored Microsoft authentication
     if (microsoftAuth.loadStoredTokens()) {
       console.log('Microsoft authentication restored from storage');
     }
-    
-    // Load API key from localStorage
-    const savedApiKey = localStorage.getItem('openai_api_key');
-    if (savedApiKey) {
-      setOpenaiApiKey(savedApiKey);
-      aiEmployeeManager.setApiKey(savedApiKey);
+
+    // Handle API key from parent application (iframe usage)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlApiKey = urlParams.get('apiKey');
+
+    if (urlApiKey) {
+      // API key provided via URL parameter
+      if (urlApiKey === 'clear' || urlApiKey === '') {
+        // Clear the API key if parent sends 'clear' or empty string
+        localStorage.removeItem('openai_api_key');
+        setOpenaiApiKey('');
+        aiEmployeeManager.setApiKey('');
+        console.log('API key cleared from parent application');
+      } else {
+        // Set the API key from parent
+        localStorage.setItem('openai_api_key', urlApiKey);
+        setOpenaiApiKey(urlApiKey);
+        aiEmployeeManager.setApiKey(urlApiKey);
+        console.log('API key received from parent application');
+      }
+
+      // Clean URL to remove the API key parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('apiKey');
+      window.history.replaceState({}, document.title, url.toString());
+    } else {
+      // Fall back to localStorage if no URL parameter
+      const savedApiKey = localStorage.getItem('openai_api_key');
+      if (savedApiKey) {
+        setOpenaiApiKey(savedApiKey);
+        aiEmployeeManager.setApiKey(savedApiKey);
+      }
     }
-    
+
     // Load theme preference
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme) {
@@ -115,8 +141,35 @@ const App: React.FC = () => {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
 
+    // Listen for API key updates from parent window (postMessage)
+    const handleMessage = (event: MessageEvent) => {
+      // Validate message structure
+      if (event.data && typeof event.data === 'object' && 'type' in event.data) {
+        if (event.data.type === 'UPDATE_API_KEY') {
+          const newApiKey = event.data.apiKey;
+
+          if (newApiKey === null || newApiKey === '' || newApiKey === 'clear') {
+            // Clear the API key
+            localStorage.removeItem('openai_api_key');
+            setOpenaiApiKey('');
+            aiEmployeeManager.setApiKey('');
+            console.log('API key cleared via postMessage');
+          } else {
+            // Update the API key
+            localStorage.setItem('openai_api_key', newApiKey);
+            setOpenaiApiKey(newApiKey);
+            aiEmployeeManager.setApiKey(newApiKey);
+            console.log('API key updated via postMessage');
+          }
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
     return () => {
       subscription?.unsubscribe();
+      window.removeEventListener('message', handleMessage);
     };
   }, []);
 
