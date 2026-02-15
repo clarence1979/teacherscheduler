@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sun, Moon, Menu, X, Bell, Settings as SettingsIcon, User, ChevronDown } from 'lucide-react';
+import { Sun, Moon, Menu, X, Bell, Settings as SettingsIcon, User, ChevronDown, LogOut, Loader2 } from 'lucide-react';
 import { auth } from '../lib/auth';
 import { isSupabaseAvailable } from '../lib/supabase';
 import { db } from '../lib/database';
@@ -12,6 +12,7 @@ import { WorkspaceManager } from '../lib/workspace-manager';
 import { MeetingScheduler } from '../lib/meeting-scheduler';
 import { AnalyticsManager } from '../lib/analytics-manager';
 import { AIEmployeeManager } from '../lib/ai-employee-manager';
+import { appAuth } from '../lib/app-auth';
 import TaskForm from './components/TaskForm';
 import ScheduleView from './components/ScheduleView';
 import TaskList from './components/TaskList';
@@ -25,6 +26,7 @@ import CalendarConnection from './components/CalendarConnection';
 import StudentRoster from './components/StudentRoster';
 import AttendanceTracker from './components/AttendanceTracker';
 import InlineAuth from './components/InlineAuth';
+import AppLogin from './components/AppLogin';
 import { Task, Event, UserSchedule, OptimizationResult } from '../lib/types';
 import { User as AuthUser } from '../lib/auth';
 
@@ -42,6 +44,9 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [appAuthenticated, setAppAuthenticated] = useState(false);
+  const [appAuthLoading, setAppAuthLoading] = useState(true);
+  const [appUsername, setAppUsername] = useState<string | null>(null);
 
   // Initialize managers
   const [userSchedule] = useState<UserSchedule>({
@@ -76,7 +81,7 @@ const App: React.FC = () => {
   const [aiEmployeeManager] = useState(() => new AIEmployeeManager());
 
   useEffect(() => {
-    checkAuth();
+    initializeApp();
 
     // Set up auth state listener
     const { data: { subscription } } = auth.onAuthStateChange(async (user) => {
@@ -98,39 +103,6 @@ const App: React.FC = () => {
       console.log('Microsoft authentication restored from storage');
     }
 
-    // Handle API key from parent application (iframe usage)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlApiKey = urlParams.get('apiKey');
-
-    if (urlApiKey) {
-      // API key provided via URL parameter
-      if (urlApiKey === 'clear' || urlApiKey === '') {
-        // Clear the API key if parent sends 'clear' or empty string
-        localStorage.removeItem('openai_api_key');
-        setOpenaiApiKey('');
-        aiEmployeeManager.setApiKey('');
-        console.log('API key cleared from parent application');
-      } else {
-        // Set the API key from parent
-        localStorage.setItem('openai_api_key', urlApiKey);
-        setOpenaiApiKey(urlApiKey);
-        aiEmployeeManager.setApiKey(urlApiKey);
-        console.log('API key received from parent application');
-      }
-
-      // Clean URL to remove the API key parameter
-      const url = new URL(window.location.href);
-      url.searchParams.delete('apiKey');
-      window.history.replaceState({}, document.title, url.toString());
-    } else {
-      // Fall back to localStorage if no URL parameter
-      const savedApiKey = localStorage.getItem('openai_api_key');
-      if (savedApiKey) {
-        setOpenaiApiKey(savedApiKey);
-        aiEmployeeManager.setApiKey(savedApiKey);
-      }
-    }
-
     // Load theme preference
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
     if (savedTheme) {
@@ -141,37 +113,120 @@ const App: React.FC = () => {
       document.documentElement.setAttribute('data-theme', 'dark');
     }
 
-    // Listen for API key updates from parent window (postMessage)
+    // Listen for postMessage events from parent
     const handleMessage = (event: MessageEvent) => {
-      // Validate message structure
       if (event.data && typeof event.data === 'object' && 'type' in event.data) {
         if (event.data.type === 'UPDATE_API_KEY') {
           const newApiKey = event.data.apiKey;
-
-          if (newApiKey === null || newApiKey === '' || newApiKey === 'clear') {
-            // Clear the API key
-            localStorage.removeItem('openai_api_key');
-            setOpenaiApiKey('');
-            aiEmployeeManager.setApiKey('');
-            console.log('API key cleared via postMessage');
-          } else {
-            // Update the API key
-            localStorage.setItem('openai_api_key', newApiKey);
-            setOpenaiApiKey(newApiKey);
-            aiEmployeeManager.setApiKey(newApiKey);
-            console.log('API key updated via postMessage');
-          }
+          handleApiKeyUpdate(newApiKey);
         }
       }
     };
 
     window.addEventListener('message', handleMessage);
+    window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
       subscription?.unsubscribe();
       window.removeEventListener('message', handleMessage);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
+
+  const initializeApp = async () => {
+    setAppAuthLoading(true);
+
+    if (appAuth.isRunningInIframe()) {
+      console.log('Running in iframe, attempting auto-login...');
+      const authUser = await appAuth.attemptIframeAutoLogin();
+
+      if (authUser) {
+        console.log('Auto-login successful:', authUser.username);
+        setAppAuthenticated(true);
+        setAppUsername(authUser.username);
+
+        const apiKey = appAuth.getApiKey('OPENAI_API_KEY');
+        if (apiKey) {
+          setOpenaiApiKey(apiKey);
+          aiEmployeeManager.setApiKey(apiKey);
+        }
+      } else {
+        console.log('Auto-login failed, requiring manual login');
+        setAppAuthenticated(false);
+      }
+    } else {
+      console.log('Not running in iframe, checking cached auth...');
+      const cachedUser = appAuth.getCurrentUser();
+
+      if (cachedUser && cachedUser.authenticated) {
+        console.log('Cached auth found:', cachedUser.username);
+        setAppAuthenticated(true);
+        setAppUsername(cachedUser.username);
+
+        const apiKey = appAuth.getApiKey('OPENAI_API_KEY');
+        if (apiKey) {
+          setOpenaiApiKey(apiKey);
+          aiEmployeeManager.setApiKey(apiKey);
+        }
+      } else {
+        console.log('No cached auth, requiring login');
+        setAppAuthenticated(false);
+      }
+    }
+
+    setAppAuthLoading(false);
+    checkAuth();
+  };
+
+  const handleApiKeyUpdate = (newApiKey: string | null) => {
+    if (newApiKey === null || newApiKey === '' || newApiKey === 'clear') {
+      localStorage.removeItem('openai_api_key');
+      setOpenaiApiKey('');
+      aiEmployeeManager.setApiKey('');
+      console.log('API key cleared via postMessage');
+    } else {
+      localStorage.setItem('openai_api_key', newApiKey);
+      setOpenaiApiKey(newApiKey);
+      aiEmployeeManager.setApiKey(newApiKey);
+      console.log('API key updated via postMessage');
+    }
+  };
+
+  const handleBeforeUnload = () => {
+    if (appAuth.isRunningInIframe()) {
+      console.log('Window closing, clearing cache...');
+      appAuth.clearCache();
+    }
+  };
+
+  const handleAppLogin = (username: string) => {
+    setAppAuthenticated(true);
+    setAppUsername(username);
+
+    const apiKey = appAuth.getApiKey('OPENAI_API_KEY');
+    if (apiKey) {
+      setOpenaiApiKey(apiKey);
+      aiEmployeeManager.setApiKey(apiKey);
+    }
+
+    checkAuth();
+  };
+
+  const handleLogout = () => {
+    appAuth.logout();
+    setAppAuthenticated(false);
+    setAppUsername(null);
+    setOpenaiApiKey('');
+    aiEmployeeManager.setApiKey('');
+
+    auth.signOut();
+    setUser(null);
+    setTasks([]);
+    setEvents([]);
+    setOptimizationResult(null);
+
+    console.log('User logged out, cache cleared');
+  };
 
   const loadUserTasks = async (userId: string) => {
     setTasksLoading(true);
@@ -405,11 +460,6 @@ const App: React.FC = () => {
     }
   };
 
-  const handleApiKeyUpdate = (apiKey: string) => {
-    setOpenaiApiKey(apiKey);
-    aiEmployeeManager.setApiKey(apiKey);
-  };
-
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
@@ -427,14 +477,16 @@ const App: React.FC = () => {
     return 'U';
   };
 
-  if (loading) {
+  if (loading || appAuthLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 to-blue-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center">
         <div className="text-center">
           <div className="mb-8">
             <div className="text-6xl mb-4 animate-pulse">🧠</div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Teacher Scheduler AI</h1>
-            <p className="text-gray-600 dark:text-gray-300">Loading your intelligent scheduler...</p>
+            <p className="text-gray-600 dark:text-gray-300">
+              {appAuthLoading ? 'Authenticating...' : 'Loading your intelligent scheduler...'}
+            </p>
           </div>
           <div className="flex justify-center">
             <div className="loading-spinner" />
@@ -442,6 +494,10 @@ const App: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (!appAuthenticated) {
+    return <AppLogin onLoginSuccess={handleAppLogin} />;
   }
 
   return (
@@ -532,10 +588,7 @@ const App: React.FC = () => {
                 </button>
 
                 <div className="flex items-center">
-                  <Settings
-                    onApiKeyUpdate={handleApiKeyUpdate}
-                    currentApiKey={openaiApiKey}
-                  />
+                  <Settings isAuthenticated={appAuthenticated} />
                 </div>
 
                 <div className="relative">
@@ -546,10 +599,10 @@ const App: React.FC = () => {
                     aria-haspopup="true"
                   >
                     <div className="user-avatar">
-                      {getUserInitials(user.fullName, user.email)}
+                      {getUserInitials(appUsername || user.fullName, user.email)}
                     </div>
                     <div className="user-info hidden sm:block">
-                      <div className="user-name">{user.fullName || user.email}</div>
+                      <div className="user-name">{appUsername || user.fullName || user.email}</div>
                       <div className="user-role">Teacher</div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -558,8 +611,14 @@ const App: React.FC = () => {
                   {showUserMenu && (
                     <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-slate-700">
-                        <div className="font-medium text-gray-900 dark:text-white">{user.fullName || 'User'}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{appUsername || user.fullName || 'User'}</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
+                        {appAuthenticated && (
+                          <div className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                            Authenticated
+                          </div>
+                        )}
                       </div>
                       <button
                         onClick={() => {
@@ -573,11 +632,12 @@ const App: React.FC = () => {
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
-                          auth.signOut();
+                          handleLogout();
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                       >
-                        Sign Out
+                        <LogOut className="h-4 w-4" />
+                        Logout
                       </button>
                     </div>
                   )}
